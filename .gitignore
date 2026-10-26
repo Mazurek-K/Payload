@@ -1,0 +1,53 @@
+# =========================
+# IDE and editor files
+# =========================
+.idea/
+.vscode/
+
+# =========================
+# Python cache files
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+env/
+
+# =========================
+# Simulation outputs
+# =========================
+output/
+*.fits
+*.fits.gz
+*.fits.bz2
+
+# =========================
+# Generated IRSA plots and data
+# =========================
+#irsa_RA_Dec_*_total_MJy_sr.png
+#irsa_background_8_12um_spectrum.png
+#irsa_background_spatial_map.png
+#irsa_background_8_12um_summary.csv
+#irsa_background_8_12um_grid.csv
+#irsa_background_8_12um.csv
+
+# =========================
+# Downloaded Pyxel examples
+# =========================
+pyxel-examples/
+
+# =========================
+# Jupyter notebook checkpoints
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Operating system files
+# =========================
+.DS_Store
+Thumbs.db

@@ -1,0 +1,96 @@
+# ── 1. Running mode ──────────────────────────────────────────────────────
+# 'exposure' runs the pipeline once (a single readout).
+exposure:
+  pipeline_seed: 42
+  readout:
+    times: [ 10.,  20.,  30.,  40.,
+             50.,  60.,  70.,  80.,
+             90., 100., 110., 120.,
+            130., 140., 150., 160., ]
+    non_destructive: true
+
+  # outputs:
+  #   output_folder: output              # results are written here (optional)
+  #   save_data_to_file:
+  #     - detector.image.array: [fits]   # save the final image as FITS
+
+# ── 2. Detector ───────────────────────────────────────────────────────────
+# A 512x512 pixel CMOS with realistic electro-optical characteristics.
+cmos_detector:
+
+  geometry:
+    row: 512                         # Unit: pixel
+    col: 512                         # Unit: pixel
+    total_thickness: 40.             # Unit: µm
+    pixel_vert_size: 10.             # Unit: µm
+    pixel_horz_size: 10.             # Unit: µm
+
+  environment:
+    temperature: 238.                # Unit: K. a typical cooled operating point
+
+  characteristics:
+    quantum_efficiency: 0.8          # 80 % of photons produce an electron
+    charge_to_volt:
+      value: 3.e-6                   # Unit: V/e⁻. The sense node sensitivity
+    pre_amplification: 100           # Unit: V/V . source-follower gain
+    adc_bit_resolution: 16           # 65 536 digital levels
+    adc_voltage_range: [0., 10.]      # V - input range of the ADC
+    full_well_capacity: 25000        # e⁻ - maximum charge before saturation
+
+# ── 3. Pipeline ───────────────────────────────────────────────────────────
+# Each entry is one model. Models run in the order listed.
+pipeline:
+
+  # photon_collection: Scene -> Photon array  (photons/pixel)
+  photon_collection:
+    - name: usaf_illumination
+      func: pyxel.models.photon_collection.usaf_illumination
+      enabled: true
+
+    - name: shot_noise
+      func: pyxel.models.photon_collection.shot_noise
+      enabled: true                  # adds Poisson noise to the photon count
+
+  # charge_generation: Photon -> Charge array  (electrons)
+  charge_generation:
+    - name: photoelectrons
+      func: pyxel.models.charge_generation.simple_conversion
+      enabled: true                  # applies quantum_efficiency from above
+
+    - name: cosmix
+      func: pyxel.models.charge_generation.cosmix
+      enabled: true                 # set to true to add cosmic-ray hits
+      arguments:
+        simulation_mode: cosmic_ray  # cosmic_ray | radioactive_decay
+        running_mode: stepsize       # stepsize is fastest for most use cases
+        particle_type: proton        # proton | alpha | ion
+        particles_per_second: 100    # average flux on the detector
+        initial_energy: random       # random energy drawn from a spectrum
+        progressbar: false
+
+  # charge_collection: Charge -> Pixel array  (electrons/pixel)
+  charge_collection:
+    - name: simple_collection
+      func: pyxel.models.charge_collection.simple_collection
+      enabled: true                  # transfers charge cloud into pixel wells
+
+    - name: simple_full_well
+      func: pyxel.models.charge_collection.simple_full_well
+      enabled: true
+
+
+  # charge_measurement: Pixel -> Signal array  (Volts)
+  charge_measurement:
+    - name: simple_measurement
+      func: pyxel.models.charge_measurement.simple_measurement
+      enabled: true                  # converts charge to voltage via charge_to_volt
+
+  # readout_electronics: Signal -> Image array  (ADU)
+  readout_electronics:
+    - name: simple_amplifier
+      func: pyxel.models.readout_electronics.simple_amplifier
+      enabled: true                  # applies pre_amplification gain
+
+    - name: simple_adc
+      func: pyxel.models.readout_electronics.simple_adc
+      enabled: true                  # quantises voltage to integer ADU values
