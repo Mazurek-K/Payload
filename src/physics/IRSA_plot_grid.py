@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-CSV_FILE = "irsa_background_8_12um_grid.csv"
+CSV_FILE = "../outputs/irsa_background_8_12um_grid.csv"
 sr_to_arcsec2 = (648000/np.pi)**2
 
 # Select wavelength in microns
@@ -96,7 +96,6 @@ scatter = ax.scatter(
     s=65,
     marker="s"
 )
-
 colorbar = plt.colorbar(scatter, ax=ax)
 colorbar.set_label(
     f"{COMPONENT} (MJy/arcsec2)"
@@ -112,16 +111,62 @@ ax.set_title(
 
 ax.set_aspect("equal", adjustable="box")
 ax.grid(True, alpha=0.3)
-
 plt.tight_layout()
+plt.show()
 
-output_file = (
-    f"irsa_RA_Dec_{SELECTED_WAVELENGTH_UM:.1f}um_"
-    f"{COMPONENT}.png"
+#######################################################################
+
+# This assumes the RA/Dec points form a regular rectangular grid.
+ra_unique = np.sort(np.unique(ra_plot))
+dec_unique = np.sort(np.unique(dec))
+RA, DEC = np.meshgrid(ra_unique, dec_unique)
+intensity_grid = np.full(RA.shape, np.nan)
+
+for r, d, value in zip(ra_plot, dec, intensity_arcsec2):
+    i = np.argmin(np.abs(ra_unique - r))
+    j = np.argmin(np.abs(dec_unique - d))
+    intensity_grid[j, i] = value
+
+fig, ax = plt.subplots(figsize=(10, 8))
+contour = ax.contourf(
+    RA,
+    DEC,
+    intensity_grid,
+    levels=20,
+    cmap="viridis"
 )
 
-plt.savefig(output_file, dpi=300)
-print(f"Plot saved to {output_file}")
-print(f"Number of grid points plotted: {len(intensity)}")
+lines = ax.contour(
+    RA,
+    DEC,
+    intensity_grid,
+    levels=10,
+    colors="black",
+    linewidths=0.6,
+    alpha=0.6
+)
+
+ax.clabel(
+    lines,
+    inline=True,
+    fontsize=8,
+    fmt="%.2g"
+)
+
+# Colorbar.
+colorbar = plt.colorbar(contour, ax=ax)
+colorbar.set_label(f"{COMPONENT} (MJy/arcsec²)")
+
+# Axis labels and title.
+ax.set_xlabel("Right Ascension (degrees)")
+ax.set_ylabel("Declination (degrees)")
+ax.set_title(
+    f"IRSA Background at {SELECTED_WAVELENGTH_UM:.1f} µm\n"
+    f"{COMPONENT}"
+)
+
+ax.set_aspect("equal", adjustable="box")
+ax.grid(True, alpha=0.3)
+plt.tight_layout()
 
 plt.show()

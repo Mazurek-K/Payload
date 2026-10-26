@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Open the FITS file
-file_path = "output/run_20261020_164007/detector_image.fits"
+file_path = "../../output/run_20261020_164007/detector_image.fits"
 
 with fits.open(file_path) as hdul:
     hdul.info()  # Show the available HDUs

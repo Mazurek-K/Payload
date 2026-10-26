@@ -25,7 +25,7 @@ output/
 *.fits
 *.fits.gz
 *.fits.bz2
-
+*.png
 # =========================
 # Generated IRSA plots and data
 # =========================
