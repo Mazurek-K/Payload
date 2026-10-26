@@ -32,7 +32,7 @@ GRID_STEP_DEG = 5.0
 WAVELENGTHS_UM = np.arange(8.0, 12.01, 1)
 
 # Output files.
-OUTPUT_CSV = "irsa_background_8_12um_grid.csv"
+OUTPUT_CSV = "irsa_background_8_12um_grid_new.csv"
 OUTPUT_SUMMARY_CSV = "irsa_background_8_12um_summary.csv"
 OUTPUT_PLOT = "irsa_background_8_12um_spectrum.png"
 

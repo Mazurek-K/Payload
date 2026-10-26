@@ -1,0 +1,38 @@
+from pathlib import Path
+import numpy as np
+
+# Paths
+ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = ROOT.parent
+CSV_FILE = PROJECT_ROOT / "outputs" / "irsa_background_8_12um_grid.csv"
+COMPONENT = "total_MJy_sr"
+
+# Physical constants
+h = 6.62607015e-34
+c = 299792458
+k = 1.380649e-23  # Boltzmann constant, J/K
+AU_2_M = 149597870700
+
+# Wavelengths
+WAVELENGTH_UM = np.array([8, 9, 10, 11, 12])
+
+# Telescope and detector
+PIXEL_PITCH = 30e-6
+APERTURE = 0.4
+FOCAL_LENGTH = 0.8
+TRANSMISSION = 0.7
+QE = 0.7
+PIXEL_ROW = 480
+
+# Sky position
+RA0, DEC0 = 25.0, 30.0
+AST_DIAMETER = 50 # [m]
+AST_DISTANCE = 0.1 * AU_2_M
+AST_TEMPERATURE = 300 # [K]
+
+# Derived quantities
+LENS_AREA = np.pi * APERTURE**2 / 4
+THETA_PIX = 206265 * PIXEL_PITCH / FOCAL_LENGTH
+OMEGA_PIX = (THETA_PIX / 206265)**2
+
+
