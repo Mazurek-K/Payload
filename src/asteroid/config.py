@@ -18,7 +18,7 @@ WAVELENGTH_UM = np.array([8, 9, 10, 11, 12])
 
 # Telescope and detector
 PIXEL_PITCH = 30e-6
-APERTURE = 0.4
+APERTURE = 0.5
 FOCAL_LENGTH = 0.8
 TRANSMISSION = 0.7
 QE = 0.7

@@ -16,6 +16,8 @@
 
 from background import calculate_background
 from asteroid import calculate_asteroid_signal
+from config import ( WAVELENGTH_UM, APERTURE, PIXEL_PITCH)
+import numpy as np
 
 def main():
     # Background rate: electrons/s/pixel
@@ -25,9 +27,11 @@ def main():
     # Total asteroid signal: electrons/s
     asteroid_rate = calculate_asteroid_signal()
 
-    # Number of pixels covering the asteroid's detected image.
-    # Replace this with the actual PSF/aperture size.
-    n_pix_source = 9
+    # Number of pixels covering the asteroid's detected image.  PSF
+    d_airy = 2.44e-6*WAVELENGTH_UM[0]/APERTURE
+    n_pix_source = ((np.pi*d_airy**2)/4) / (PIXEL_PITCH**2)
+    print("N pix source: ",n_pix_source)
+
 
     # Background contribution over those pixels: electrons/s
     background_under_asteroid = mean_background * n_pix_source

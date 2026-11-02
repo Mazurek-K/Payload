@@ -44,21 +44,21 @@ pipeline:
   # photon_collection: Scene -> Photon array  (photons/pixel)
   photon_collection:
     - name: usaf_illumination
-      func: pyxel.models.photon_collection.usaf_illumination
+      func: sensor.models.photon_collection.usaf_illumination
       enabled: true
 
     - name: shot_noise
-      func: pyxel.models.photon_collection.shot_noise
+      func: sensor.models.photon_collection.shot_noise
       enabled: true                  # adds Poisson noise to the photon count
 
   # charge_generation: Photon -> Charge array  (electrons)
   charge_generation:
     - name: photoelectrons
-      func: pyxel.models.charge_generation.simple_conversion
+      func: sensor.models.charge_generation.simple_conversion
       enabled: true                  # applies quantum_efficiency from above
 
     - name: cosmix
-      func: pyxel.models.charge_generation.cosmix
+      func: sensor.models.charge_generation.cosmix
       enabled: true                 # set to true to add cosmic-ray hits
       arguments:
         simulation_mode: cosmic_ray  # cosmic_ray | radioactive_decay
@@ -71,26 +71,26 @@ pipeline:
   # charge_collection: Charge -> Pixel array  (electrons/pixel)
   charge_collection:
     - name: simple_collection
-      func: pyxel.models.charge_collection.simple_collection
+      func: sensor.models.charge_collection.simple_collection
       enabled: true                  # transfers charge cloud into pixel wells
 
     - name: simple_full_well
-      func: pyxel.models.charge_collection.simple_full_well
+      func: sensor.models.charge_collection.simple_full_well
       enabled: true
 
 
   # charge_measurement: Pixel -> Signal array  (Volts)
   charge_measurement:
     - name: simple_measurement
-      func: pyxel.models.charge_measurement.simple_measurement
+      func: sensor.models.charge_measurement.simple_measurement
       enabled: true                  # converts charge to voltage via charge_to_volt
 
   # readout_electronics: Signal -> Image array  (ADU)
   readout_electronics:
     - name: simple_amplifier
-      func: pyxel.models.readout_electronics.simple_amplifier
+      func: sensor.models.readout_electronics.simple_amplifier
       enabled: true                  # applies pre_amplification gain
 
     - name: simple_adc
-      func: pyxel.models.readout_electronics.simple_adc
+      func: sensor.models.readout_electronics.simple_adc
       enabled: true                  # quantises voltage to integer ADU values

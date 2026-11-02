@@ -43,17 +43,17 @@ pipeline:
   # Photon collection
   photon_collection:
     - name: shot_noise
-      func: pyxel.models.photon_collection.shot_noise
+      func: sensor.models.photon_collection.shot_noise
       enabled: true
 
   # Photon -> electrons
   charge_generation:
     - name: photoelectrons
-      func: pyxel.models.charge_generation.simple_conversion
+      func: sensor.models.charge_generation.simple_conversion
       enabled: true
 
     - name: cosmix
-      func: pyxel.models.charge_generation.cosmix
+      func: sensor.models.charge_generation.cosmix
       enabled: false
       arguments:
         simulation_mode: cosmic_ray
@@ -66,25 +66,25 @@ pipeline:
   # Charge -> pixel wells
   charge_collection:
     - name: simple_collection
-      func: pyxel.models.charge_collection.simple_collection
+      func: sensor.models.charge_collection.simple_collection
       enabled: true
 
     - name: simple_full_well
-      func: pyxel.models.charge_collection.simple_full_well
+      func: sensor.models.charge_collection.simple_full_well
       enabled: true
 
   # Pixel charge -> voltage
   charge_measurement:
     - name: simple_measurement
-      func: pyxel.models.charge_measurement.simple_measurement
+      func: sensor.models.charge_measurement.simple_measurement
       enabled: true
 
   # Voltage -> digital image
   readout_electronics:
     - name: simple_amplifier
-      func: pyxel.models.readout_electronics.simple_amplifier
+      func: sensor.models.readout_electronics.simple_amplifier
       enabled: true
 
     - name: simple_adc
-      func: pyxel.models.readout_electronics.simple_adc
+      func: sensor.models.readout_electronics.simple_adc
       enabled: true

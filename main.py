@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm
 
 
-with open('src/pyxel/my_first_sim.yaml', 'r') as file:
+with open('src/sensor/my_first_sim.yaml', 'r') as file:
     YAML_CONFIG = file.read()
 config = pyxel.loads(YAML_CONFIG)
 config.pipeline.charge_generation.cosmix.enabled = True

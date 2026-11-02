@@ -158,11 +158,22 @@ colorbar = plt.colorbar(contour, ax=ax)
 colorbar.set_label(f"{COMPONENT} (MJy/arcsec²)")
 
 # Axis labels and title.
-ax.set_xlabel("Right Ascension (degrees)")
-ax.set_ylabel("Declination (degrees)")
+# ax.set_xlabel("Right Ascension (degrees)")
+# ax.set_ylabel("Declination (degrees)")
+
+ax.set_xlabel(
+    "Right Ascension (degrees)",
+    fontsize=20,
+)
+
+ax.set_ylabel(
+    "Declination (degrees)",
+    fontsize=20,
+)
 ax.set_title(
     f"IRSA Background at {SELECTED_WAVELENGTH_UM:.1f} µm\n"
-    f"{COMPONENT}"
+    f"{COMPONENT}",
+    fontsize = 20
 )
 
 ax.set_aspect("equal", adjustable="box")
