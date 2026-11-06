@@ -1,10 +1,9 @@
-import csv
+import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 
+HDF5_FILE = "../outputs/irsa_background_ecliptic_8_12um.h5"
 
-CSV_FILE = "../outputs/irsa_background_8_12um_grid.csv"
-sr_to_arcsec2 = (648000/np.pi)**2
 
 # Select wavelength in microns
 SELECTED_WAVELENGTH_UM = 8.0
@@ -17,92 +16,145 @@ SELECTED_WAVELENGTH_UM = 8.0
 # "total_MJy_sr"
 COMPONENT = "total_MJy_sr"
 
-# -----------------------------
-# Read CSV
-# -----------------------------
-ra_values = []
-dec_values = []
-intensity_values = []
-wavelength_values = []
+# Ecliptic longitude around which the plot is centred
+CENTRE_LON_DEG = 0.0
 
-with open(CSV_FILE, "r", newline="") as file:
-    reader = csv.DictReader(file)
+# Intensity threshold in MJy/sr
+THRESHOLD = 100.0
 
-    required_columns = {
-        "ra_deg",
-        "dec_deg",
-        "wavelength_um",
-        COMPONENT,
-    }
+# Conversion: square arcseconds in one steradian
+sr_to_arcsec2 = (648000 / np.pi) ** 2
 
-    missing = required_columns - set(reader.fieldnames or [])
-    if missing:
-        raise ValueError(
-            f"Missing CSV columns: {', '.join(sorted(missing))}"
-        )
 
-    for row in reader:
-        wavelength = float(row["wavelength_um"])
+# --------------------------------------------------
+# Read HDF5
+# --------------------------------------------------
 
-        if np.isclose(
-            wavelength,
-            SELECTED_WAVELENGTH_UM,
-            atol=1e-6,
-            rtol=0
-        ):
-            ra_values.append(float(row["ra_deg"]))
-            dec_values.append(float(row["dec_deg"]))
-            intensity_values.append(float(row[COMPONENT]))
-            wavelength_values.append(wavelength)
+with h5py.File(HDF5_FILE, "r") as file:
 
-if not intensity_values:
+    lon_grid = file["coordinates/ecliptic_longitude_deg"][:]
+    lat_grid = file["coordinates/ecliptic_latitude_deg"][:]
+
+    wavelengths = file["spectral/wavelength_um"][:]
+
+    component_names = [
+        name.decode("utf-8") if isinstance(name, bytes) else str(name)
+        for name in file["background/component_names"][:]
+    ]
+
+    # Shape:
+    # (ecliptic longitude, ecliptic latitude,
+    #  wavelength, component)
+    results = file["background/values"][:]
+
+
+# --------------------------------------------------
+# Select component
+# --------------------------------------------------
+
+if COMPONENT not in component_names:
     raise ValueError(
-        f"No rows found for wavelength "
-        f"{SELECTED_WAVELENGTH_UM} µm."
+        f"Component '{COMPONENT}' not found.\n"
+        f"Available components: {component_names}"
     )
 
-ra = np.asarray(ra_values)
-dec = np.asarray(dec_values)
-intensity = np.asarray(intensity_values)
+component_index = component_names.index(COMPONENT)
 
-# Centre the RA axis on the circular mean of the data
-ra_rad = np.deg2rad(ra)
-centre_ra = np.rad2deg(
-    np.arctan2(
-        np.mean(np.sin(ra_rad)),
-        np.mean(np.cos(ra_rad))
+
+# --------------------------------------------------
+# Select wavelength
+# --------------------------------------------------
+
+wavelength_matches = np.where(
+    np.isclose(
+        wavelengths,
+        SELECTED_WAVELENGTH_UM,
+        atol=1e-6,
+        rtol=0,
     )
-) % 360.0
-# Wrap RA differences into the range [-180, 180)
-ra_plot = ((ra - centre_ra + 180.0) % 360.0) - 180.0
+)[0]
 
-threshold = 100.0
-mask = intensity < threshold
-intensity = intensity[mask]
-ra_plot = ra_plot[mask]
-dec = dec[mask]
-intensity_arcsec2 = intensity*sr_to_arcsec2
+if len(wavelength_matches) == 0:
+    raise ValueError(
+        f"Wavelength {SELECTED_WAVELENGTH_UM} µm "
+        "not found in the HDF5 file."
+    )
 
-# -----------------------------
-# RA x Dec scatter plot
-# -----------------------------
+wavelength_index = wavelength_matches[0]
+
+
+# --------------------------------------------------
+# Extract 2D background map
+# --------------------------------------------------
+
+# Shape:
+# (ecliptic longitude, ecliptic latitude)
+intensity = results[
+    :,
+    :,
+    wavelength_index,
+    component_index
+]
+
+# Convert the longitude coordinates to offsets around
+# the selected central longitude. This avoids a jump
+# from 295 degrees to 0 degrees in the plot.
+lon_plot = (
+    (lon_grid - CENTRE_LON_DEG + 180.0) % 360.0
+) - 180.0
+
+# Apply intensity threshold
+mask = intensity < THRESHOLD
+
+intensity_masked = np.where(mask, intensity, np.nan)
+
+# Convert MJy/sr to MJy/arcsec^2
+intensity_arcsec2 = intensity_masked / sr_to_arcsec2
+
+
+# --------------------------------------------------
+# Prepare coordinates for plotting
+# --------------------------------------------------
+
+# The HDF5 grid has axis order:
+# (longitude, latitude)
+#
+# Transpose the arrays for plotting with latitude
+# on the vertical axis and longitude on the horizontal.
+
+LON = lon_plot
+LAT = lat_grid
+
+# Meshgrid for contour plotting
+LON_mesh, LAT_mesh = np.meshgrid(
+    LON[:, 0],
+    LAT[0, :],
+    indexing="ij",
+)
+
+
+# --------------------------------------------------
+# 1. Ecliptic longitude x latitude scatter plot
+# --------------------------------------------------
+
 fig, ax = plt.subplots(figsize=(10, 8))
 
 scatter = ax.scatter(
-    ra_plot,
-    dec,
-    c=intensity_arcsec2,
+    lon_plot.flatten(),
+    lat_grid.flatten(),
+    c=intensity_arcsec2.flatten(),
     cmap="viridis",
     s=65,
-    marker="s"
-)
-colorbar = plt.colorbar(scatter, ax=ax)
-colorbar.set_label(
-    f"{COMPONENT} (MJy/arcsec2)"
+    marker="s",
 )
 
-ax.set_xlabel("Right Ascension (degrees)")
-ax.set_ylabel("Declination (degrees)")
+colorbar = plt.colorbar(scatter, ax=ax)
+colorbar.set_label(
+    f"{COMPONENT} (MJy/arcsec²)"
+)
+
+ax.set_xlabel("Ecliptic longitude offset (degrees)")
+ax.set_ylabel("Ecliptic latitude (degrees)")
 
 ax.set_title(
     f"IRSA Background at {SELECTED_WAVELENGTH_UM:.1f} µm\n"
@@ -111,73 +163,67 @@ ax.set_title(
 
 ax.set_aspect("equal", adjustable="box")
 ax.grid(True, alpha=0.3)
+
 plt.tight_layout()
 plt.show()
 
-#######################################################################
 
-# This assumes the RA/Dec points form a regular rectangular grid.
-ra_unique = np.sort(np.unique(ra_plot))
-dec_unique = np.sort(np.unique(dec))
-RA, DEC = np.meshgrid(ra_unique, dec_unique)
-intensity_grid = np.full(RA.shape, np.nan)
-
-for r, d, value in zip(ra_plot, dec, intensity_arcsec2):
-    i = np.argmin(np.abs(ra_unique - r))
-    j = np.argmin(np.abs(dec_unique - d))
-    intensity_grid[j, i] = value
+# --------------------------------------------------
+# 2. Filled contour plot
+# --------------------------------------------------
 
 fig, ax = plt.subplots(figsize=(10, 8))
+
 contour = ax.contourf(
-    RA,
-    DEC,
-    intensity_grid,
+    LON_mesh,
+    LAT_mesh,
+    intensity_arcsec2,
     levels=20,
-    cmap="viridis"
+    cmap="viridis",
 )
 
 lines = ax.contour(
-    RA,
-    DEC,
-    intensity_grid,
+    LON_mesh,
+    LAT_mesh,
+    intensity_arcsec2,
     levels=10,
     colors="black",
     linewidths=0.6,
-    alpha=0.6
+    alpha=0.6,
 )
 
 ax.clabel(
     lines,
     inline=True,
     fontsize=8,
-    fmt="%.2g"
+    fmt="%.2g",
 )
 
-# Colorbar.
+# Colorbar
 colorbar = plt.colorbar(contour, ax=ax)
-colorbar.set_label(f"{COMPONENT} (MJy/arcsec²)")
+colorbar.set_label(
+    f"{COMPONENT} (MJy/arcsec²)"
+)
 
-# Axis labels and title.
-# ax.set_xlabel("Right Ascension (degrees)")
-# ax.set_ylabel("Declination (degrees)")
-
+# Axis labels
 ax.set_xlabel(
-    "Right Ascension (degrees)",
+    "Ecliptic longitude offset (degrees)",
     fontsize=20,
 )
 
 ax.set_ylabel(
-    "Declination (degrees)",
+    "Ecliptic latitude (degrees)",
     fontsize=20,
 )
+
 ax.set_title(
     f"IRSA Background at {SELECTED_WAVELENGTH_UM:.1f} µm\n"
     f"{COMPONENT}",
-    fontsize = 20
+    fontsize=20,
 )
 
 ax.set_aspect("equal", adjustable="box")
 ax.grid(True, alpha=0.3)
-plt.tight_layout()
 
+plt.tight_layout()
 plt.show()

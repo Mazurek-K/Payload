@@ -28,10 +28,9 @@ def main():
     asteroid_rate = calculate_asteroid_signal()
 
     # Number of pixels covering the asteroid's detected image.  PSF
-    d_airy = 2.44e-6*WAVELENGTH_UM[0]/APERTURE
-    n_pix_source = ((np.pi*d_airy**2)/4) / (PIXEL_PITCH**2)
+    d_airy = 2 * 1.22e-6*WAVELENGTH_UM[0]/APERTURE
+    n_pix_source = ((np.pi*d_airy**2)/4) / (PIXEL_PITCH**2) # just rough assume that A_pixels = A_airy
     print("N pix source: ",n_pix_source)
-
 
     # Background contribution over those pixels: electrons/s
     background_under_asteroid = mean_background * n_pix_source

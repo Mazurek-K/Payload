@@ -24,10 +24,12 @@ TRANSMISSION = 0.7
 QE = 0.7
 PIXEL_ROW = 480
 
-# Sky position
+# Sky position and asteroid
+EMISSIVITY = 1.
+EPSILON_F = 1. # surface ratio of incoming light on sensor
 RA0, DEC0 = 25.0, 30.0
 AST_DIAMETER = 50 # [m]
-AST_DISTANCE = 0.1 * AU_2_M
+AST_DISTANCE = 0.01 * AU_2_M
 AST_TEMPERATURE = 300 # [K]
 
 # Derived quantities
