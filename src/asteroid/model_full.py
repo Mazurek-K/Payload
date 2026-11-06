@@ -1,23 +1,8 @@
-# from background import calculate_background
-# from asteroid import calculate_asteroid_signal
-#
-#
-# def main():
-#     background_rate = calculate_background()
-#     print("\n ------------------------------------------------------------")
-#     asteroid_signal = calculate_asteroid_signal()
-#
-#     print(background_rate.mean())
-#
-# if __name__ == "__main__":
-#     main()
-
-######################
-
 from background import calculate_background
 from asteroid import calculate_asteroid_signal
 from config import ( WAVELENGTH_UM, APERTURE, PIXEL_PITCH)
 import numpy as np
+np.set_printoptions(linewidth=200)
 
 def main():
     # Background rate: electrons/s/pixel
