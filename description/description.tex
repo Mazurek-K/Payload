@@ -1,0 +1,681 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+
+\usepackage[colorlinks=true,
+            citecolor=black,
+            linkcolor=black,
+            urlcolor=blue]{hyperref}
+\title{payload_eq}
+\author{Krzysztof Mazurek}
+\date{November 2026}
+
+\begin{document}
+
+
+\section{Introduction}
+
+
+\section{Asteroid Signal Calculation}
+
+\subsection{Input Parameters}
+
+The calculation uses the following parameters:
+
+\begin{align}
+D_{\mathrm{ast}} & : \text{Asteroid diameter } [\mathrm{m}] \\
+d_{\mathrm{ast}} & : \text{Asteroid distance } [\mathrm{m}] \\
+T_{\mathrm{ast}} & : \text{Asteroid temperature } [\mathrm{K}] \\
+\epsilon & : \text{Asteroid emissivity } [-] \\
+\lambda & : \text{Wavelength } [\mathrm{\mu m}] \\
+A_{\mathrm{lens}} & : \text{Lens collecting area } [\mathrm{m^2}] \\
+\tau & : \text{Optical transmission } [-] \\
+\mathrm{QE} & : \text{Quantum efficiency } [-]\\
+\epsilon & :  \text{Emissivity} [-]
+\end{align}
+
+
+
+\subsection{Physical Constants}
+
+The calculation uses the following fundamental physical constants:
+
+\begin{align}
+h &= 6.62607015 \times 10^{-34}
+\quad \mathrm{J\,s}
+\\
+c &= 2.99792458 \times 10^8
+\quad \mathrm{m\,s^{-1}}
+\\
+k_{\mathrm{B}} &= 1.380649 \times 10^{-23}
+\quad \mathrm{J\,K^{-1}}
+\end{align}
+
+
+\subsection{Planck's Law: Spectral Radiance}
+
+The spectral radiance of the asteroid is calculated using Planck's law scaled by emissivity  \cite{planck_wikipedia}:
+
+\begin{equation}
+B_{\lambda}(T) =
+\frac{2hc^2}{\lambda^5}
+\frac{1}{
+\exp\left(\frac{hc}{\lambda k_{\mathrm{B}}T}\right)-1
+}
+\end{equation}
+
+\begin{equation}
+[B_{\lambda}] =
+\mathrm{W\,m^{-2}\,sr^{-1}\,m^{-1}}
+\end{equation}
+
+\subsection{Apparent Solid Angle of the Asteroid}
+
+Assuming a spherical asteroid, its projected area is :
+
+\begin{equation}
+A_{\mathrm{ast}} =
+\pi \left(\frac{D_{\mathrm{ast}}}{2}\right)^2
+\end{equation}
+
+Its apparent solid angle, assuming the asteroid is sufficiently distant compared with its diameter, is \cite{breinig_radiometry}:
+
+\begin{equation}
+\Omega_{\mathrm{ast}} =
+\frac{\pi (D_{\mathrm{ast}}/2)^2}
+{d_{\mathrm{ast}}^2}
+=
+\frac{\pi D_{\mathrm{ast}}^2}
+{4d_{\mathrm{ast}}^2}
+\end{equation}
+
+\begin{equation}
+[\Omega_{\mathrm{ast}}] = \mathrm{sr}
+\end{equation}
+
+\subsection{Spectral Flux Density}
+
+The spectral flux density received from the asteroid is:
+
+\begin{equation}
+    F_{\lambda} = \int_{source} \epsilon B_{\lambda}(T_{ast})cos(\theta)d\Omega
+\end{equation}
+
+And assuming a small dinstant body:
+
+\begin{equation}
+F_{\lambda} =
+\epsilon B_{\lambda}(T_{\mathrm{ast}})
+\Omega_{\mathrm{ast}}
+\end{equation}
+
+Converting the spectral flux density from per metre to per micrometre gives:
+
+\begin{equation}
+F_{\lambda,\mathrm{\mu m}} =
+\epsilon B_{\lambda}(T_{\mathrm{ast}})
+\Omega_{\mathrm{ast}} \times 10^{-6}
+\end{equation}
+
+\begin{equation}
+[F_{\lambda,\mathrm{\mu m}}] =
+\mathrm{W\,m^{-2}\,\mu m^{-1}}
+\end{equation}
+
+\subsection{Detected Electron Spectrum}
+
+The energy of an individual photon is:
+
+\begin{equation}
+E_{\mathrm{photon}} =
+\frac{hc}{\lambda}
+\end{equation}
+\subsection{Detected Electron Spectrum}
+
+The detected electron spectrum is calculated following the count-rate formalism described in the Hubble Space Telescope WFC3 Instrument Handbook \cite{marinelli2025wfc3}:
+
+\begin{equation}
+\frac{dC}{d\lambda_{\mathrm{\mu m}}} =
+F_{\lambda,\mathrm{\mu m}}
+A_{\mathrm{lens}}
+\frac{\lambda_{\mathrm{m}}}{hc}
+\tau
+\mathrm{QE}
+\epsilon_f
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $A_{\mathrm{lens}}$ is the collecting area of the lens.
+    \item $\tau$ is the optical transmission.
+    \item $\mathrm{QE}$ is the detector quantum efficiency.
+    \item $\epsilon_f$ is the fraction of the source energy enclosed within the selected detector aperture.
+    \item $\lambda_{\mathrm{m}}/(hc)$ converts energy flux into photon flux.
+\end{itemize}
+
+The resulting units are:
+
+\begin{equation}
+\left[
+\frac{dC}{d\lambda_{\mathrm{\mu m}}}
+\right]
+=
+\mathrm{electrons\,s^{-1}\,\mu m^{-1}}
+\end{equation}
+
+\subsection{Total Detected Count Rate}
+
+The total detected count rate is obtained by integrating the electron spectrum over the wavelength range:
+
+\begin{equation}
+C =
+\int_{\lambda_{\min}}^{\lambda_{\max}}
+\frac{dC}{d\lambda_{\mathrm{\mu m}}}
+\,d\lambda_{\mathrm{\mu m}}
+\end{equation}
+
+Numerically, the integration is performed using the trapezoidal rule since only 5 distincitve wavelengths were recorded:
+
+\begin{equation}
+C \approx
+\sum_{i=1}^{n-1}
+\frac{
+S_i + S_{i+1}
+}{2}
+(\lambda_{i+1}-\lambda_i)
+\end{equation}
+
+where $S_i$ represents the detected electron spectrum at wavelength $\lambda_i$.
+
+The final unit is:
+
+\begin{equation}
+[C] =
+\mathrm{electrons\,s^{-1}}
+\end{equation}
+
+\newpage
+
+
+
+
+\section{Diffuse Infrared Background Calculation}
+
+\subsection{Overview}
+
+In addition to the thermal emission from the asteroid, the detector receives diffuse infrared radiation from the surrounding sky. This radiation contributes to the detector background and produces additional photoelectrons.
+
+The purpose of this calculation is to determine the background electron count rate per detector pixel, expressed in electrons per second per pixel.
+
+The calculation consists of the following steps:
+
+\begin{enumerate}
+    \item Retrieve the spectral background intensity from an HDF5 dataset.
+    \item Select the required background component and wavelengths.
+    \item Interpolate the background intensity to the specified ecliptic sky position.
+    \item Convert spectral intensity from frequency-based units to wavelength-based units.
+    \item Convert the spectral energy intensity into a photon rate.
+    \item Account for the telescope collecting area, pixel solid angle, optical transmission, and detector quantum efficiency.
+    \item Integrate over the selected wavelength range to obtain the total electron count rate.
+\end{enumerate}
+
+\subsection{Background Model and Input Data}
+
+The background model is stored in an HDF5 file and contains the spectral intensity of several infrared background components as a function of ecliptic longitude, ecliptic latitude, and wavelength.
+
+The available components include:
+
+\begin{itemize}
+    \item Zodiacal emission.
+    \item Interstellar medium (ISM) emission.
+    \item Stellar emission.
+    \item Cosmic infrared background (CIB).
+    \item Total background intensity.
+\end{itemize}
+
+In this calculation, the total background component is selected.
+
+The background spectral intensity is assumed to be provided in units of megajanskys per steradian:
+
+\begin{equation}
+[I_{\nu}] = \mathrm{MJy\,sr^{-1}}.
+\end{equation}
+
+Here, $I_{\nu}$ represents the specific intensity of the radiation field per unit frequency and per unit solid angle.
+
+Unlike spectral flux density, specific intensity describes the radiation arriving from a particular direction on the sky. It is therefore appropriate for describing an extended diffuse background.
+
+The five selected wavelengths are:
+
+\begin{equation}
+\lambda_i = 8,9,10,11,12\ \mathrm{\mu m}.
+\end{equation}
+
+The corresponding spectral intensities are obtained from the background model at each wavelength.
+
+\subsection{Spatial Interpolation of the Background}
+
+The background dataset is defined on a discrete grid of ecliptic longitude and latitude coordinates.
+
+The required observation position is specified by:
+
+\begin{align}
+l_0 &= \texttt{ECLIPTIC\_LON0},\\
+b_0 &= \texttt{ECLIPTIC\_LAT0}.
+\end{align}
+
+Since the observation position will generally not coincide exactly with a grid point, spatial interpolation is required.
+
+
+The longitude coordinates require special treatment because longitude is an angular coordinate defined modulo $360^\circ$. For example, the sequence
+
+\begin{equation}
+295^\circ,300^\circ,\ldots,355^\circ,0^\circ,
+5^\circ,\ldots,65^\circ
+\end{equation}
+
+contains a discontinuity at $360^\circ$.
+
+The longitude sequence is therefore unwrapped to produce a continuous coordinate sequence. Subtracting $360^\circ$ then transforms it into:
+
+\begin{equation}
+-65^\circ,-60^\circ,\ldots,0^\circ,\ldots,60^\circ,65^\circ.
+\end{equation}
+
+This allows the longitude coordinate to be represented by a monotonically increasing one-dimensional axis, as required by the regular-grid interpolation method.
+
+The interpolated background intensity is assumed to vary linearly between neighbouring spatial grid points.
+
+\subsection{Conversion from Spectral Intensity to SI Units}
+
+The background dataset provides spectral intensity in $\mathrm{MJy\,sr^{-1}}$, whereas the photon-rate calculation requires SI units.
+
+The Jansky is defined as:
+
+\begin{equation}
+1\ \mathrm{Jy}
+=
+10^{-26}\ \mathrm{W\,m^{-2}\,Hz^{-1}}.
+\end{equation}
+
+Consequently:
+
+\begin{equation}
+1\ \mathrm{MJy}
+=
+10^{6}\ \mathrm{Jy}
+=
+10^{-20}\ \mathrm{W\,m^{-2}\,Hz^{-1}}.
+\end{equation}
+
+The conversion from the dataset intensity to SI units is therefore:
+
+\begin{equation}
+I_{\nu,\mathrm{SI}}
+=
+I_{\nu,\mathrm{MJy}}
+\times 10^{-20}.
+\end{equation}
+
+\begin{equation}
+[I_{\nu,\mathrm{SI}}]
+=
+\mathrm{W\,m^{-2}\,Hz^{-1}\,sr^{-1}}.
+\end{equation}
+
+\subsection{Conversion from Frequency to Wavelength Representation}
+
+The background model provides spectral intensity per unit frequency, $I_{\nu}$, whereas the subsequent photon-counting calculation is performed as a function of wavelength.
+
+The relationship between frequency and wavelength is:
+
+\begin{equation}
+\nu = \frac{c}{\lambda}.
+\end{equation}
+
+Therefore, the spectral intensity per unit wavelength is:
+
+\begin{equation}
+I_{\lambda}
+=
+I_{\nu}\frac{c}{\lambda^2}.
+\end{equation}
+
+Here, $\lambda$ is expressed in metres, giving:
+
+\begin{equation}
+[I_{\lambda}]
+=
+\mathrm{W\,m^{-2}\,sr^{-1}\,m^{-1}}.
+\end{equation}
+
+However, the wavelength grid in the background dataset is expressed in micrometres. The spectral intensity must consequently be converted from per metre to per micrometre.
+
+
+The conversion becomes:
+
+\begin{equation}
+I_{\lambda,\mathrm{\mu m}}
+=
+I_{\nu,\mathrm{SI}}
+\frac{c}{\lambda_{\mathrm{m}}^2}
+\times 10^{-6}.
+\end{equation}
+
+The resulting units are:
+
+\begin{equation}
+[I_{\lambda,\mathrm{\mu m}}]
+=
+\mathrm{W\,m^{-2}\,sr^{-1}\,\mu m^{-1}}.
+\end{equation}
+
+\subsection{Photon Energy and Spectral Photon Rate}
+
+The energy of an individual photon is determined by Planck's relation:
+
+\begin{equation}
+E_{\mathrm{photon}}
+=
+h\nu
+=
+\frac{hc}{\lambda_{\mathrm{m}}}.
+\end{equation}
+
+The spectral energy intensity can therefore be converted into a spectral photon intensity by dividing by the energy of an individual photon.
+
+The resulting photon spectral intensity is:
+
+\begin{equation}
+N_{\lambda}
+=
+\frac{I_{\lambda,\mathrm{\mu m}}}
+{E_{\mathrm{photon}}}.
+\end{equation}
+
+Substituting the expression for photon energy gives:
+
+\begin{equation}
+N_{\lambda}
+=
+I_{\lambda,\mathrm{\mu m}}
+\frac{\lambda_{\mathrm{m}}}{hc}.
+\end{equation}
+
+Its units are:
+
+\begin{equation}
+[N_{\lambda}]
+=
+\mathrm{photons\,s^{-1}\,m^{-2}\,sr^{-1}\,\mu m^{-1}}.
+\end{equation}
+
+This quantity describes the number of photons arriving per unit time, collecting area, solid angle, and wavelength interval.
+
+\subsection{Telescope Collecting Area}
+
+The telescope collecting area determines the amount of incoming radiation intercepted by the optical system.
+
+For a circular aperture with diameter $D_{\mathrm{lens}}$, the collecting area is:
+
+\begin{equation}
+A_{\mathrm{lens}}
+=
+\pi\left(\frac{D_{\mathrm{lens}}}{2}\right)^2
+=
+\frac{\pi D_{\mathrm{lens}}^2}{4}.
+\end{equation}
+
+This calculation assumes that the entire geometrical aperture is available for collecting radiation, without accounting for additional obscuration or vignetting.
+
+\subsection{Pixel Solid Angle}
+
+The diffuse background is characterised by its spectral intensity per unit solid angle. To calculate the radiation incident on an individual detector pixel, the angular area of the pixel on the sky must be considered.
+
+For a square detector pixel, the corresponding solid angle is approximately \cite{usgs_pp1769_chapter24}:
+
+\begin{equation}
+\Omega_{\mathrm{pix}}
+\approx
+\theta_{\mathrm{pix}}^2
+=
+\left(\frac{p}{f}\right)^2.
+\end{equation}
+
+Using the adopted detector and telescope parameters:
+
+the angular pixel width becomes:
+
+\begin{equation}
+\theta_{\mathrm{pix}}
+=
+\frac{30\times10^{-6}}{0.8}
+=
+3.75\times10^{-5}\ \mathrm{rad}.
+\end{equation}
+
+In arcseconds, this corresponds to:
+
+\begin{equation}
+\theta_{\mathrm{pix}}
+\approx 7.73\ \mathrm{arcsec}.
+\end{equation}
+
+The pixel solid angle is consequently:
+
+\begin{equation}
+\boxed{
+\Omega_{\mathrm{pix}}
+\approx
+1.40625\times10^{-9}\ \mathrm{sr}
+}
+\end{equation}
+
+This approximation assumes square pixels, a small angular field, and negligible distortion across the detector.
+
+\subsection{Photon Rate Incident on One Pixel}
+
+The spectral photon intensity is multiplied by the telescope collecting area and the solid angle subtended by one detector pixel.
+
+The spectral photon rate incident on a single pixel is therefore \cite{usgs_pp1769_chapter24}:
+
+\begin{equation}
+\frac{dN_{\gamma}}{dt\,d\lambda_{\mathrm{\mu m}}}
+=
+N_{\lambda}
+A_{\mathrm{lens}}
+\Omega_{\mathrm{pix}}.
+\end{equation}
+
+Substituting the expression for $N_{\lambda}$ gives:
+
+\begin{equation}
+\frac{dN_{\gamma}}{dt\,d\lambda_{\mathrm{\mu m}}}
+=
+I_{\lambda,\mathrm{\mu m}}
+\frac{\lambda_{\mathrm{m}}}{hc}
+A_{\mathrm{lens}}
+\Omega_{\mathrm{pix}}.
+\end{equation}
+
+Not all photons entering the telescope reach the detector. Some are lost due to absorption, reflection losses, and other inefficiencies in the optical system.
+
+These losses are represented by the optical transmission factor:
+
+\begin{equation}
+\tau=0.7.
+\end{equation}
+
+The spectral photon rate reaching the detector is thus:
+
+\begin{equation}
+\boxed{
+\frac{dN_{\gamma,\mathrm{det}}}
+{dt\,d\lambda_{\mathrm{\mu m}}}
+=
+I_{\lambda,\mathrm{\mu m}}
+\frac{\lambda_{\mathrm{m}}}{hc}
+A_{\mathrm{lens}}
+\Omega_{\mathrm{pix}}
+\tau
+}
+\end{equation}
+
+The resulting units are:
+
+\begin{equation}
+\left[
+\frac{dN_{\gamma,\mathrm{det}}}
+{dt\,d\lambda_{\mathrm{\mu m}}}
+\right]
+=
+\mathrm{photons\,s^{-1}\,pixel^{-1}\,\mu m^{-1}}.
+\end{equation}
+
+\subsection{Conversion from Photons to Electrons}
+
+The detector converts only a fraction of the incident photons into photoelectrons.
+
+This conversion efficiency is described by the quantum efficiency (QE):
+
+\begin{equation}
+\mathrm{QE}
+=
+\frac{\text{Number of detected photoelectrons}}
+{\text{Number of incident photons}}.
+\end{equation}
+
+For this calculation, a wavelength-independent quantum efficiency of:
+
+\begin{equation}
+\mathrm{QE}=0.7
+\end{equation}
+
+is assumed.
+
+The spectral electron generation rate is therefore:
+
+\begin{equation}
+\frac{dC_{\mathrm{bg}}}
+{d\lambda_{\mathrm{\mu m}}}
+=
+\mathrm{QE}
+\frac{dN_{\gamma,\mathrm{det}}}
+{dt\,d\lambda_{\mathrm{\mu m}}}.
+\end{equation}
+
+Combining the previous expressions:
+
+\begin{equation}
+\boxed{
+\frac{dC_{\mathrm{bg}}}
+{d\lambda_{\mathrm{\mu m}}}
+=
+I_{\lambda,\mathrm{\mu m}}
+\frac{\lambda_{\mathrm{m}}}{hc}
+A_{\mathrm{lens}}
+\Omega_{\mathrm{pix}}
+\tau
+\mathrm{QE}
+}
+\end{equation}
+
+The units are:
+
+\begin{equation}
+\left[
+\frac{dC_{\mathrm{bg}}}
+{d\lambda_{\mathrm{\mu m}}}
+\right]
+=
+\mathrm{electrons\,s^{-1}\,pixel^{-1}\,\mu m^{-1}}.
+\end{equation}
+
+\subsection{Integration over Wavelength}
+
+The final background electron count rate is obtained by integrating the spectral electron generation rate over the selected wavelength range.
+
+For the adopted wavelength interval:
+
+\begin{equation}
+\lambda_{\min}=8\ \mathrm{\mu m},
+\qquad
+\lambda_{\max}=12\ \mathrm{\mu m},
+\end{equation}
+
+the total background electron rate is:
+
+\begin{equation}
+C_{\mathrm{bg}}
+=
+\int_{\lambda_{\min}}^{\lambda_{\max}}
+\frac{dC_{\mathrm{bg}}}
+{d\lambda_{\mathrm{\mu m}}}
+\,d\lambda_{\mathrm{\mu m}}.
+\end{equation}
+
+The integral is evaluated numerically using the trapezoidal rule.
+
+For $n$ discrete wavelength samples, this becomes:
+
+\begin{equation}
+C_{\mathrm{bg}}
+\approx
+\sum_{i=1}^{n-1}
+\frac{S_i+S_{i+1}}{2}
+(\lambda_{i+1}-\lambda_i),
+\end{equation}
+
+where $S_i$ denotes the spectral electron generation rate at wavelength $\lambda_i$.
+
+In this implementation, five wavelength samples are used, separated by $1\ \mathrm{\mu m}$.
+
+The final result is:
+
+\begin{equation}
+\boxed{
+C_{\mathrm{bg}}
+=
+\mathrm{electrons\,s^{-1}\,pixel^{-1}}
+}
+\end{equation}
+
+This represents the background electron generation rate in an individual detector pixel.
+
+\subsection{Assumptions and Limitations}
+
+The background count-rate calculation relies on the following assumptions:
+
+\begin{enumerate}
+    \item \textbf{Spatial interpolation:} The background intensity varies linearly between neighbouring points of the ecliptic coordinate grid.
+
+    \item \textbf{Uniform background within a pixel:} The diffuse background intensity is assumed to be constant across the angular area of an individual detector pixel.
+
+    \item \textbf{Uniform optical transmission:} The optical transmission is assumed to be constant across the selected wavelength interval and across the detector.
+
+    \item \textbf{Constant quantum efficiency:} The detector quantum efficiency is assumed to be wavelength-independent and equal to 0.7.
+
+    \item \textbf{Ideal geometrical collecting area:} The effective collecting area is taken to be the geometrical area of the circular telescope aperture. Additional losses due to obscuration or vignetting are neglected.
+
+    \item \textbf{Square pixels and small-angle approximation:} The pixel solid angle is calculated using $\Omega_{\mathrm{pix}}\approx(p/f)^2$.
+
+    \item \textbf{Numerical wavelength integration:} The spectral electron rate is assumed to vary linearly between the five selected wavelength samples, as implied by the trapezoidal integration.
+
+    \item \textbf{Negligible additional detector contributions:} Dark current, read noise, charge-transfer losses, and other detector effects are not included in the calculated background electron generation rate.
+\end{enumerate}
+
+Furthermore, the present calculation assumes that the same background intensity and detector response apply to every pixel. Consequently, it produces a single background electron rate per pixel rather than a spatially varying detector image.
+
+The total background contribution for an exposure time $t_{\mathrm{exp}}$ can subsequently be expressed as:
+
+\begin{equation}
+N_{\mathrm{bg}}
+=
+C_{\mathrm{bg}}t_{\mathrm{exp}},
+\end{equation}
+
+where $N_{\mathrm{bg}}$ is the expected number of background-generated electrons per pixel during the exposure.
+\bibliographystyle{ieeetr}
+\bibliography{bibliography}
+
+\end{document}

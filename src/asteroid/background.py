@@ -137,14 +137,12 @@ def calculate_background():
     # --------------------------------------------------
     # Integrate over wavelength
     # --------------------------------------------------
-
     photon_rate = np.trapezoid(
         photon_spectrum,
         wavelength,
     )
 
     electron_rate = photon_rate * QE  # electrons/s/pixel
-
     # --------------------------------------------------
     # Print results
     # --------------------------------------------------
