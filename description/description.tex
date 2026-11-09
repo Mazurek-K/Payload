@@ -1,12 +1,13 @@
 \documentclass{article}
 \usepackage{graphicx} % Required for inserting images
 \usepackage{amsmath}
-
+\usepackage{float}
 \usepackage[colorlinks=true,
             citecolor=black,
             linkcolor=black,
             urlcolor=blue]{hyperref}
 \title{payload_eq}
+\usepackage[a4paper, total={6in, 8in}]{geometry}
 \author{Krzysztof Mazurek}
 \date{November 2026}
 
@@ -661,7 +662,6 @@ The background count-rate calculation relies on the following assumptions:
 
     \item \textbf{Numerical wavelength integration:} The spectral electron rate is assumed to vary linearly between the five selected wavelength samples, as implied by the trapezoidal integration.
 
-    \item \textbf{Negligible additional detector contributions:} Dark current, read noise, charge-transfer losses, and other detector effects are not included in the calculated background electron generation rate.
 \end{enumerate}
 
 Furthermore, the present calculation assumes that the same background intensity and detector response apply to every pixel. Consequently, it produces a single background electron rate per pixel rather than a spatially varying detector image.
@@ -675,6 +675,57 @@ C_{\mathrm{bg}}t_{\mathrm{exp}},
 \end{equation}
 
 where $N_{\mathrm{bg}}$ is the expected number of background-generated electrons per pixel during the exposure.
+
+\section{Results}
+
+% \begin{itemize}
+%     \item Mean background: $47113.98\ \mathrm{e^-\,s^{-1}\,pixel^{-1}}$
+%     \item Asteroid signal: $162794\ \mathrm{e^-\,s^{-1}}$
+%     \item Background (1.33 pixels): $62663.8\ \mathrm{e^-\,s^{-1}}$
+%     \item Asteroid/background ratio: $2.60$
+% \end{itemize}
+
+\section{Simulation Settings}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lc}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Pixel pitch & $30\,\mu$m \\
+Aperture & $0.5$ m \\
+Focal length & $0.8$ m \\
+Transmission & $0.7$ \\
+Quantum efficiency & $0.7$ \\
+Detector rows & $480$ \\
+Emissivity & $1.0$ \\
+Surface ratio ($\epsilon_F$) & $1.0$ \\
+Ecliptic longitude & $30^\circ$ \\
+Ecliptic latitude & $20^\circ$ \\
+Asteroid diameter & $50$ m \\
+Asteroid distance & $0.01$ AU \\
+Asteroid temperature & $300$ K \\
+\hline
+\end{tabular}
+\caption{Simulation parameters.}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Images/im1.png}
+    \caption{}
+    \label{fig:conops}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Images/im2.png}
+    \caption{}
+    \label{fig:cono}
+\end{figure}
+
+
 \bibliographystyle{ieeetr}
 \bibliography{bibliography}
 

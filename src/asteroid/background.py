@@ -4,6 +4,7 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.interpolate import LinearNDInterpolator
 np.set_printoptions(linewidth=200)
+import matplotlib.pyplot as plt
 
 from config import (
     HDF5_FILE,
@@ -11,19 +12,16 @@ from config import (
     WAVELENGTH_UM,
     ECLIPTIC_LON0,
     ECLIPTIC_LAT0,
-    PIXEL_ROW,
     h,
     c,
     LENS_AREA,
     OMEGA_PIX,
     TRANSMISSION,
     QE,
-    SR_TO_ARCSEC2,
-    EPSILON_F
 )
 
 
-def calculate_background():
+def calculate_background_local():
 
     with h5py.File(HDF5_FILE, "r") as file:
 
@@ -147,10 +145,191 @@ def calculate_background():
     # Print results
     # --------------------------------------------------
 
+    print("======================================================================")
+    print("calculate_background_local() : \n")
     print("Selected component:", selected_component)
     print("Ecliptic position:", ECLIPTIC_LON0, ECLIPTIC_LAT0)
     print("Wavelengths (µm):", wavelength)
     print("Background (MJy/sr):", intensity)
     print("Background:", electron_rate, "electrons/s/pixel")
+    print("======================================================================")
+
+    return electron_rate
+
+
+
+
+def calculate_background_global(plot = True):
+
+    with h5py.File(HDF5_FILE, "r") as file:
+
+        lon = file["coordinates/ecliptic_longitude_deg"][:]
+        lat = file["coordinates/ecliptic_latitude_deg"][:]
+        all_wavelengths = file["spectral/wavelength_um"][:]
+
+        component_names = [
+            name.decode("utf-8") if isinstance(name, bytes) else str(name)
+            for name in file["background/component_names"][:]
+        ]
+
+        all_values = file["background/values"][:]
+
+    component_aliases = {
+        "zodiacal": "zodiacal_MJy_sr",
+        "ISM": "ISM_MJy_sr",
+        "stars": "stars_MJy_sr",
+        "CIB": "CIB_MJy_sr",
+        "total": "total_MJy_sr",
+    }
+
+    selected_component = component_aliases.get(COMPONENT, COMPONENT)
+
+    if selected_component not in component_names:
+        raise ValueError(
+            f"Component '{COMPONENT}' not found. "
+            f"Available components: {component_names}"
+        )
+
+    component_index = component_names.index(selected_component)
+
+    # Select component: (lon, lat, wavelength)
+    sky = all_values[:, :, :, component_index]
+
+    # Select requested wavelengths
+    wavelength_indices = []
+
+    for requested_wavelength in WAVELENGTH_UM:
+
+        matches = np.where(
+            np.isclose(
+                all_wavelengths,
+                requested_wavelength,
+                atol=1e-6,
+                rtol=0
+            )
+        )[0]
+
+        if len(matches) == 0:
+            raise ValueError(
+                f"Wavelength {requested_wavelength} µm not available."
+            )
+
+        wavelength_indices.append(matches[0])
+
+    wavelength_indices = np.asarray(wavelength_indices)
+
+    wavelength = all_wavelengths[wavelength_indices]
+
+    # Shape: (N_lon, N_lat, N_wavelength)
+    intensity = sky[:, :, wavelength_indices]
+
+    # Sort wavelengths before integration
+    wavelength_order = np.argsort(wavelength)
+
+    wavelength = wavelength[wavelength_order]
+    intensity = intensity[:, :, wavelength_order]
+
+    # Convert spectral intensity
+    lam = wavelength * 1e-6
+
+    I_nu = intensity * 1e-20
+
+    I_lam = I_nu * c / lam**2 * 1e-6
+
+    # Photon spectrum
+    photon_spectrum = (
+        I_lam
+        * lam
+        / (h * c)
+        * LENS_AREA
+        * OMEGA_PIX
+        * TRANSMISSION
+    )
+
+    # Integrate over wavelength (axis=2)
+    photon_rate = np.trapezoid(
+        photon_spectrum,
+        x=wavelength,
+        axis=2
+    )
+
+    # Convert to electron rate
+    electron_rate = photon_rate * QE
+
+    print("======================================================================")
+    print("calculate_background_global(): \n")
+    print("Selected component:", selected_component)
+    print("Wavelengths:", wavelength)
+    print("Intensity shape:", intensity.shape)
+    print("Photon rate shape:", photon_rate.shape)
+    print("Electron rate shape:", electron_rate.shape)
+    print("======================================================================")
+
+
+    def plot_electron_rate(electron_rate):
+
+        with h5py.File(HDF5_FILE, "r") as file:
+            lon = file["coordinates/ecliptic_longitude_deg"][:]
+            lat = file["coordinates/ecliptic_latitude_deg"][:]
+
+        # Extract 1D coordinate axes
+        lon_1d = lon[:, 0].astype(float)
+        lat_1d = lat[0, :].astype(float)
+
+        # Unwrap and sort longitude
+        lon_1d = np.rad2deg(np.unwrap(np.deg2rad(lon_1d)))
+        lon_1d = (lon_1d + 180) % 360 - 180
+
+        lon_order = np.argsort(lon_1d)
+        lat_order = np.argsort(lat_1d)
+
+        lon_1d = lon_1d[lon_order]
+        lat_1d = lat_1d[lat_order]
+
+        # Reorder electron-rate array
+        electron_rate = electron_rate[lon_order, :][:, lat_order]
+
+        # Create mask: keep only |longitude| > 25 and |latitude| > 25
+        # mask = (
+        #         (np.abs(lon_1d[:, None]) > 25) |
+        #         (np.abs(lat_1d[None, :]) > 25)
+        # )
+        mask = (
+                (np.sqrt(lon_1d[:, None]**2 + lat_1d[None, :]**2) > 25)
+        )
+
+        # Apply mask
+        electron_rate_masked = np.where(mask, electron_rate, np.nan)
+
+        # Plot
+        plt.figure(figsize=(8, 6))
+
+        mesh = plt.pcolormesh(
+            lon_1d,
+            lat_1d,
+            electron_rate_masked.T,
+            shading="auto",
+            cmap="inferno"
+        )
+
+        cbar = plt.colorbar(mesh)
+        cbar.set_label("Electron rate (electrons/s/pixel)")
+        cbar.formatter = plt.ScalarFormatter(useMathText=True)
+        cbar.formatter.set_scientific(True)
+        cbar.formatter.set_powerlimits((0, 0))
+        cbar.update_ticks()
+
+        plt.xlabel("Ecliptic longitude (deg)")
+        plt.ylabel("Ecliptic latitude (deg)")
+
+        plt.title("Global background electron rate")
+
+        plt.tight_layout()
+        plt.show()
+
+
+    if plot:
+        plot_electron_rate(electron_rate)
+
 
     return electron_rate

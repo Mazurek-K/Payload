@@ -93,8 +93,6 @@ intensity_arcsec2_mili = intensity_arcsec2* 1e9
 # The HDF5 grid has axis order:
 # (longitude, latitude)
 #
-# Transpose the arrays for plotting with latitude
-# on the vertical axis and longitude on the horizontal.
 
 LON = lon_plot
 LAT = lat_grid
