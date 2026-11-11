@@ -1,3 +1,5 @@
+from helpers import airy_disk
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -16,7 +18,8 @@ def calculate_asteroid_signal(
     distance=AST_DISTANCE,
     temperature=AST_TEMPERATURE,
     emissivity=EMISSIVITY,
-    epsilon_f= EPSILON_F
+    epsilon_f= EPSILON_F,
+    per_pixel = False
 ):
     lam = WAVELENGTH_UM * 1e-6
 
@@ -45,17 +48,20 @@ def calculate_asteroid_signal(
     # Total detected count rate: electrons/s on the sensor overall
     C = np.trapezoid(dC_dlambda, WAVELENGTH_UM)
 
+    if per_pixel:
+        n_pix_source,_  = airy_disk()
+        electron_rate_perpix = C / n_pix_source
 
-    print("Asteroid count rate C:", C, "electrons/s")
-
-    return C
+        return electron_rate_perpix
+    else:
+        return C
 
 
 
 def plot_asteroid_parameter_space(
-    threshold = 1e5,
-    diameter_range = (20, 500),
-    distance_range = (0.001*149597870700, 0.1*149597870700),
+    threshold = 1e2,
+    diameter_range = (20, 50),
+    distance_range = (0.03*149597870700, 0.16*149597870700),
     n_diameters=100,
     n_distances=100,
     log_scale=True,
@@ -77,38 +83,31 @@ def plot_asteroid_parameter_space(
         raise ValueError("Diameters and distances must be positive.")
 
     # Calculate reference signal using existing function
-    C_ref = calculate_asteroid_signal(
-        diameter=AST_DIAMETER,
-        distance=AST_DISTANCE
-    )
+
 
     # Create 2D parameter grid
     D_grid, R_grid = np.meshgrid(diameters, distances, indexing="ij")
 
-    # Scale reference count rate
-    electron_rate = (
-        C_ref
-        * (D_grid / AST_DIAMETER)**2
-        * (AST_DISTANCE / R_grid)**2
-    )
+    # # Scale reference count rate
+    electron_rate_perpix = np.zeros_like(D_grid)
 
-    d_airy = 2 * 1.22e-6*WAVELENGTH_UM[0]/APERTURE
-    n_pix_source = ((np.pi*d_airy**2)/4) / (PIXEL_PITCH**2) # just rough assume that A_pixels = A_airy
-    electron_rate_perpix = electron_rate/n_pix_source
+    for i, diameter in enumerate(diameters):
+        for j, distance in enumerate(distances):
+            electron_rate_perpix[i, j] = calculate_asteroid_signal(
+                diameter=diameter,
+                distance=distance,
+                per_pixel= True
+            )
 
-    # --------------------------------------------------
-    # Plot
     plt.figure(figsize=(10, 7))
 
-    mask = electron_rate>threshold
-    electron_rate_masked = np.where(mask, electron_rate_perpix, np.nan)
     distances_AU = distances/AU_2_M
 
     if log_scale:
         mesh = plt.pcolormesh(
             distances_AU,
             diameters,
-            electron_rate_masked,
+            electron_rate_perpix,
             shading="auto",
             cmap="inferno",
             norm=LogNorm()
@@ -117,7 +116,7 @@ def plot_asteroid_parameter_space(
         mesh = plt.pcolormesh(
             distances,
             diameters,
-            electron_rate,
+            electron_rate_perpix,
             shading="auto",
             cmap="inferno"
         )
@@ -133,4 +132,4 @@ def plot_asteroid_parameter_space(
     plt.tight_layout()
     plt.show()
 
-    return diameters, distances, electron_rate
+    return diameters, distances, electron_rate_perpix

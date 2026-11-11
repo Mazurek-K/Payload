@@ -1,8 +1,7 @@
-
+from helpers import plot_lat_long
 import h5py
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
-from scipy.interpolate import LinearNDInterpolator
 np.set_printoptions(linewidth=200)
 import matplotlib.pyplot as plt
 
@@ -157,8 +156,6 @@ def calculate_background_local():
     return electron_rate
 
 
-
-
 def calculate_background_global(plot = True):
 
     with h5py.File(HDF5_FILE, "r") as file:
@@ -254,7 +251,7 @@ def calculate_background_global(plot = True):
     )
 
     # Convert to electron rate
-    electron_rate = photon_rate * QE
+    electron_rate = photon_rate * QE # e-/s/pixel
 
     print("======================================================================")
     print("calculate_background_global(): \n")
@@ -265,71 +262,8 @@ def calculate_background_global(plot = True):
     print("Electron rate shape:", electron_rate.shape)
     print("======================================================================")
 
-
-    def plot_electron_rate(electron_rate):
-
-        with h5py.File(HDF5_FILE, "r") as file:
-            lon = file["coordinates/ecliptic_longitude_deg"][:]
-            lat = file["coordinates/ecliptic_latitude_deg"][:]
-
-        # Extract 1D coordinate axes
-        lon_1d = lon[:, 0].astype(float)
-        lat_1d = lat[0, :].astype(float)
-
-        # Unwrap and sort longitude
-        lon_1d = np.rad2deg(np.unwrap(np.deg2rad(lon_1d)))
-        lon_1d = (lon_1d + 180) % 360 - 180
-
-        lon_order = np.argsort(lon_1d)
-        lat_order = np.argsort(lat_1d)
-
-        lon_1d = lon_1d[lon_order]
-        lat_1d = lat_1d[lat_order]
-
-        # Reorder electron-rate array
-        electron_rate = electron_rate[lon_order, :][:, lat_order]
-
-        # Create mask: keep only |longitude| > 25 and |latitude| > 25
-        # mask = (
-        #         (np.abs(lon_1d[:, None]) > 25) |
-        #         (np.abs(lat_1d[None, :]) > 25)
-        # )
-        mask = (
-                (np.sqrt(lon_1d[:, None]**2 + lat_1d[None, :]**2) > 25)
-        )
-
-        # Apply mask
-        electron_rate_masked = np.where(mask, electron_rate, np.nan)
-
-        # Plot
-        plt.figure(figsize=(8, 6))
-
-        mesh = plt.pcolormesh(
-            lon_1d,
-            lat_1d,
-            electron_rate_masked.T,
-            shading="auto",
-            cmap="inferno"
-        )
-
-        cbar = plt.colorbar(mesh)
-        cbar.set_label("Electron rate (electrons/s/pixel)")
-        cbar.formatter = plt.ScalarFormatter(useMathText=True)
-        cbar.formatter.set_scientific(True)
-        cbar.formatter.set_powerlimits((0, 0))
-        cbar.update_ticks()
-
-        plt.xlabel("Ecliptic longitude (deg)")
-        plt.ylabel("Ecliptic latitude (deg)")
-
-        plt.title("Global background electron rate")
-
-        plt.tight_layout()
-        plt.show()
-
-
     if plot:
-        plot_electron_rate(electron_rate)
+        plot_lat_long(electron_rate, "Electron rate (e-/s/pix)", mask=True)
 
 
     return electron_rate

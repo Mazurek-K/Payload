@@ -23,12 +23,20 @@ SR_TO_ARCSEC2 = SR_TO_ARCSEC** 2
 WAVELENGTH_UM = np.arange(8.0, 12.01, 1)
 
 # Telescope and detector
-PIXEL_PITCH = 30e-6
 APERTURE = 0.5
-FOCAL_LENGTH = 0.8
+# FOCAL_LENGTH = 0.8
+FOCAL_LENGTH =2
 TRANSMISSION = 0.7
 QE = 0.7
-PIXEL_ROW = 480
+# PIXEL_ROW = 480
+# PIXEL_PITCH = 30e-6
+PIXEL_ROW = 2048
+PIXEL_PITCH = 18e-6
+DARK_CURRENT = 0.05 # e-/pix/s
+READ_NOISE = 15 # e-
+WELL_CAPACITY = 80000 # e-
+
+
 
 # Sky position and asteroid
 EMISSIVITY = 1.
@@ -37,7 +45,7 @@ EPSILON_F = 1. # surface ratio of incoming light on sensor
 ECLIPTIC_LON0 = 30.0
 ECLIPTIC_LAT0 = 20.0
 AST_DIAMETER = 50 # [m]
-AST_DISTANCE = 0.01 * AU_2_M
+AST_DISTANCE = 0.05 * AU_2_M
 AST_TEMPERATURE = 300 # [K]
 
 # Derived quantities

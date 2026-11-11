@@ -20,7 +20,7 @@ COMPONENT = "total_MJy_sr"
 CENTRE_LON_DEG = 0.0
 
 # Intensity threshold in MJy/sr
-THRESHOLD = 100.0
+THRESHOLD = 100
 
 # Conversion: square arcseconds in one steradian
 sr_to_arcsec2 = SR_TO_ARCSEC2
