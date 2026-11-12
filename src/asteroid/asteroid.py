@@ -1,4 +1,4 @@
-from helpers import airy_disk
+from helpers import airy_disk, airy_disk2D
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,8 +19,12 @@ def calculate_asteroid_signal(
     temperature=AST_TEMPERATURE,
     emissivity=EMISSIVITY,
     epsilon_f= EPSILON_F,
-    per_pixel = False
+    per_pixel = False,
+    per_pixel2D = False
 ):
+    if per_pixel and per_pixel2D:
+        raise ValueError("Choose between per_pixel and per_pixel2D")
+
     lam = WAVELENGTH_UM * 1e-6
 
     # Planck spectral radiance: W m^-2 sr^-1 m^-1
@@ -46,14 +50,30 @@ def calculate_asteroid_signal(
     )
 
     # Total detected count rate: electrons/s on the sensor overall
-    C = np.trapezoid(dC_dlambda, WAVELENGTH_UM)
 
     if per_pixel:
         n_pix_source,_  = airy_disk()
-        electron_rate_perpix = C / n_pix_source
-
+        dC_dlambda_perpix = dC_dlambda / n_pix_source
+        electron_rate_perpix = np.trapezoid(dC_dlambda_perpix, WAVELENGTH_UM)
         return electron_rate_perpix
+
+    if per_pixel2D:
+        hs = airy_disk2D(plot=False)
+
+        # Distribute the spectral signal across the 2D pixel masks
+        dC_dlambda_2d = (
+                dC_dlambda[:, np.newaxis, np.newaxis]* np.array(hs) )
+
+        # Integrate over wavelength
+        electron_rate_2d = np.trapezoid(
+            dC_dlambda_2d,
+            WAVELENGTH_UM,
+            axis=0
+        )
+
+        return electron_rate_2d
     else:
+        C = np.trapezoid(dC_dlambda, WAVELENGTH_UM)
         return C
 
 
@@ -126,7 +146,6 @@ def plot_asteroid_parameter_space(
 
     plt.xlabel("Asteroid distance (same units as AST_DISTANCE) [AU] ")
     plt.ylabel("Asteroid diameter (same units as AST_DIAMETER)")
-
     plt.title("Asteroid electron rate")
 
     plt.tight_layout()

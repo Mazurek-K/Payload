@@ -60,4 +60,3 @@ OMEGA_PIX = (THETA_PIX / SR_TO_ARCSEC)**2   # [sr]
 
 
 
-

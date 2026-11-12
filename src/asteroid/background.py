@@ -253,14 +253,14 @@ def calculate_background_global(plot = True):
     # Convert to electron rate
     electron_rate = photon_rate * QE # e-/s/pixel
 
-    print("======================================================================")
-    print("calculate_background_global(): \n")
-    print("Selected component:", selected_component)
-    print("Wavelengths:", wavelength)
-    print("Intensity shape:", intensity.shape)
-    print("Photon rate shape:", photon_rate.shape)
-    print("Electron rate shape:", electron_rate.shape)
-    print("======================================================================")
+    # print("======================================================================")
+    # print("calculate_background_global(): \n")
+    # print("Selected component:", selected_component)
+    # print("Wavelengths:", wavelength)
+    # print("Intensity shape:", intensity.shape)
+    # print("Photon rate shape:", photon_rate.shape)
+    # print("Electron rate shape:", electron_rate.shape)
+    # print("======================================================================")
 
     if plot:
         plot_lat_long(electron_rate, "Electron rate (e-/s/pix)", mask=True)
