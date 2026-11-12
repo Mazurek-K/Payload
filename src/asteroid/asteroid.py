@@ -1,4 +1,4 @@
-from helpers import airy_disk, airy_disk2D
+from helpers import airy_disk, airy_disk2D, get_optical_factors
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,7 +7,7 @@ from matplotlib.colors import LogNorm
 
 from config import (
     h, c, k, WAVELENGTH_UM, AU_2_M,
-    LENS_AREA, TRANSMISSION, QE,PIXEL_PITCH,
+     TRANSMISSION, QE,PIXEL_PITCH, FOCAL_LENGTH,
     AST_DISTANCE, AST_TEMPERATURE, AST_DIAMETER, EMISSIVITY, APERTURE
 )
 from src.asteroid.config import EPSILON_F
@@ -19,12 +19,16 @@ def calculate_asteroid_signal(
     temperature=AST_TEMPERATURE,
     emissivity=EMISSIVITY,
     epsilon_f= EPSILON_F,
+    aperture = APERTURE,
+    focal_length = FOCAL_LENGTH,
     per_pixel = False,
-    per_pixel2D = False
+    per_pixel2D = False,
+    plot = False
 ):
     if per_pixel and per_pixel2D:
         raise ValueError("Choose between per_pixel and per_pixel2D")
 
+    lens_area, _ = get_optical_factors(aperture, focal_length)
     lam = WAVELENGTH_UM * 1e-6
 
     # Planck spectral radiance: W m^-2 sr^-1 m^-1
@@ -42,7 +46,7 @@ def calculate_asteroid_signal(
     # Detected count-rate spectrum: electrons/s/µm
     dC_dlambda = (
         F_lam
-        * LENS_AREA
+        * lens_area
         * TRANSMISSION
         * QE
         * lam / (h * c)
@@ -52,13 +56,13 @@ def calculate_asteroid_signal(
     # Total detected count rate: electrons/s on the sensor overall
 
     if per_pixel:
-        n_pix_source,_  = airy_disk()
+        n_pix_source,_  = airy_disk(aperture = aperture, focal_length = focal_length)
         dC_dlambda_perpix = dC_dlambda / n_pix_source
         electron_rate_perpix = np.trapezoid(dC_dlambda_perpix, WAVELENGTH_UM)
         return electron_rate_perpix
 
     if per_pixel2D:
-        hs = airy_disk2D(plot=False)
+        hs = airy_disk2D( aperture = aperture, focal_length = focal_length)
 
         # Distribute the spectral signal across the 2D pixel masks
         dC_dlambda_2d = (
@@ -71,6 +75,27 @@ def calculate_asteroid_signal(
             axis=0
         )
 
+        if plot:
+            fig, ax = plt.subplots()
+            im = ax.imshow(
+                electron_rate_2d,
+                origin="lower",
+                cmap="gray",
+                interpolation="nearest",
+                vmin=0,
+                vmax=np.max(electron_rate_2d)
+            )
+
+            n_pix = electron_rate_2d.shape[0]
+            ax.set_xticks(np.arange(-0.5, n_pix, 1))
+            ax.set_yticks(np.arange(-0.5, n_pix, 1))
+            ax.grid(color="red", linewidth=0.5)
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_aspect("equal")
+            cbar = fig.colorbar(im, ax=ax)
+            cbar.set_label("Electron rate [electrons/s]")
+            plt.show()
         return electron_rate_2d
     else:
         C = np.trapezoid(dC_dlambda, WAVELENGTH_UM)

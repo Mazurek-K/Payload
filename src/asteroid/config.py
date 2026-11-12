@@ -24,8 +24,10 @@ WAVELENGTH_UM = np.arange(8.0, 12.01, 1)
 
 # Telescope and detector
 APERTURE = 0.5
-# FOCAL_LENGTH = 0.8
 FOCAL_LENGTH =2
+
+# APERTURE = 0.7
+# FOCAL_LENGTH =0.3
 TRANSMISSION = 0.7
 QE = 0.7
 # PIXEL_ROW = 480
@@ -44,15 +46,15 @@ EPSILON_F = 1. # surface ratio of incoming light on sensor
 # RA0, DEC0 = 25.0, 30.0
 ECLIPTIC_LON0 = 30.0
 ECLIPTIC_LAT0 = 20.0
-AST_DIAMETER = 50 # [m]
+AST_DIAMETER = 20 # [m]
 AST_DISTANCE = 0.05 * AU_2_M
 AST_TEMPERATURE = 300 # [K]
 
 # Derived quantities
-LENS_AREA = np.pi * APERTURE**2 / 4
-THETA_PIX = SR_TO_ARCSEC * PIXEL_PITCH / FOCAL_LENGTH  # [arcsec]
-OMEGA_PIX = (THETA_PIX / SR_TO_ARCSEC)**2   # [sr]
-
+# LENS_AREA = np.pi * APERTURE**2 / 4
+# THETA_PIX = SR_TO_ARCSEC * PIXEL_PITCH / FOCAL_LENGTH  # [arcsec]
+# OMEGA_PIX = (THETA_PIX / SR_TO_ARCSEC)**2   # [sr]
+#
 
 
 

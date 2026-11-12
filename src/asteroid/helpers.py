@@ -1,14 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
-from config import ( WAVELENGTH_UM, APERTURE, PIXEL_PITCH, HDF5_FILE, FOCAL_LENGTH)
+from config import ( WAVELENGTH_UM, APERTURE, PIXEL_PITCH, HDF5_FILE, FOCAL_LENGTH, SR_TO_ARCSEC)
 from scipy.integrate import quad
 from matplotlib.patches import Circle
 
 
-def airy_disk():
-    d_airy = 2 * 1.22e-6 * WAVELENGTH_UM / APERTURE
-    d_airy_focal = FOCAL_LENGTH * d_airy
+def airy_disk(aperture = APERTURE, focal_length = FOCAL_LENGTH):
+    d_airy = 2 * 1.22e-6 * WAVELENGTH_UM / aperture
+    d_airy_focal = focal_length * d_airy
     n_pix = np.pi * d_airy_focal**2 / (4 * PIXEL_PITCH**2)
 
     return n_pix, d_airy
@@ -43,13 +43,13 @@ def circle_pixel_area(x0, y0, pixel_pitch, radius):
     return area
 
 
-def airy_disk2D(plot = True):
+def airy_disk2D(plot = False, focal_length = FOCAL_LENGTH, aperture = APERTURE):
 
     hs = []
 
     # Maximum grid size, based on the largest wavelength
-    d_airy_max = 2 * 1.22e-6 * np.max(WAVELENGTH_UM)
-    d_airy_focal_max = FOCAL_LENGTH * d_airy_max
+    d_airy_max = 2 * 1.22e-6 * np.max(WAVELENGTH_UM)/aperture
+    d_airy_focal_max = focal_length * d_airy_max
 
     n_pix = int(np.ceil(d_airy_focal_max / PIXEL_PITCH))
     n_pix = n_pix + 1 if n_pix % 2 == 0 else n_pix
@@ -63,8 +63,8 @@ def airy_disk2D(plot = True):
     for wavelength in WAVELENGTH_UM:
 
         # Calculate radius for this wavelength
-        d_airy = 2 * 1.22e-6 * wavelength
-        d_airy_focal = FOCAL_LENGTH * d_airy
+        d_airy = 2 * 1.22e-6 * wavelength/aperture
+        d_airy_focal = focal_length * d_airy
         radius = d_airy_focal / 2
 
         pixel_array = np.zeros((n_pix, n_pix))
@@ -83,7 +83,6 @@ def airy_disk2D(plot = True):
         hs.append(pixel_array)
 
         if plot:
-            # Plot
             fig, ax = plt.subplots()
 
             ax.imshow(
@@ -120,6 +119,14 @@ def airy_disk2D(plot = True):
     return hs
 
 
+def get_optical_factors(aperture, focal_length):
+    lens_area = np.pi * aperture ** 2 / 4
+    theta_pix = SR_TO_ARCSEC * PIXEL_PITCH / focal_length  # [arcsec]
+    omega_pix = (theta_pix / SR_TO_ARCSEC) ** 2  # [sr]
+
+    return lens_area, omega_pix
+
+
 def plot_lat_long(data, title="-", mask=False, cmap="viridis"):
 
     with h5py.File(HDF5_FILE, "r") as file:
@@ -139,7 +146,7 @@ def plot_lat_long(data, title="-", mask=False, cmap="viridis"):
     data = data[lon_order, :][:, lat_order]
 
     if mask :
-        mask = (np.sqrt(lon[:, None]**2 + lat[None, :]**2) > 25)
+        mask = (np.sqrt(lon[:, None]**2 + lat[None, :]**2) > 20)
         data =  np.where(mask, data, np.nan)
 
     plt.figure(figsize=(8, 6))

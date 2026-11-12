@@ -1,4 +1,4 @@
-from helpers import plot_lat_long
+from helpers import plot_lat_long, get_optical_factors
 import h5py
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
@@ -13,14 +13,14 @@ from config import (
     ECLIPTIC_LAT0,
     h,
     c,
-    LENS_AREA,
-    OMEGA_PIX,
     TRANSMISSION,
     QE,
+    APERTURE,
+    FOCAL_LENGTH
 )
 
 
-def calculate_background_local():
+def calculate_background_local( aperture = APERTURE, focal_length = FOCAL_LENGTH):
 
     with h5py.File(HDF5_FILE, "r") as file:
 
@@ -117,17 +117,18 @@ def calculate_background_local():
 
     # --------------------------------------------------
     # Convert spectral intensity to photon rate
-    # --------------------------------------------------
+    #
     lam = wavelength * 1e-6 # convert to  [µm -> m]
     I_nu = intensity * 1e-20  #  [MJy/sr -> W m^-2 Hz^-1 sr^-1]
     I_lam = (I_nu * c/ lam ** 2 * 1e-6 ) # W m^-2 sr^-1 µm^-1
+    lens_area, omega_pix = get_optical_factors(aperture, focal_length)
 
     photon_spectrum = (
             I_lam
             * lam
             / (h * c)
-            * LENS_AREA
-            * OMEGA_PIX
+            * lens_area
+            * omega_pix
             * TRANSMISSION
     )  # photons / (s * pixel * µm)
 
@@ -156,7 +157,7 @@ def calculate_background_local():
     return electron_rate
 
 
-def calculate_background_global(plot = True):
+def calculate_background_global(plot = True, aperture = APERTURE, focal_length = FOCAL_LENGTH):
 
     with h5py.File(HDF5_FILE, "r") as file:
 
@@ -233,13 +234,16 @@ def calculate_background_global(plot = True):
 
     I_lam = I_nu * c / lam**2 * 1e-6
 
+    lens_area, omega_pix = get_optical_factors(aperture, focal_length)
+
+
     # Photon spectrum
     photon_spectrum = (
         I_lam
         * lam
         / (h * c)
-        * LENS_AREA
-        * OMEGA_PIX
+        * lens_area
+        * omega_pix
         * TRANSMISSION
     )
 
