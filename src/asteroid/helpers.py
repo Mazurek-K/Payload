@@ -154,7 +154,7 @@ def plot_lat_long(data, title="-", mask=False, cmap="viridis"):
     data = data[lon_order, :][:, lat_order]
 
     if mask :
-        mask = (np.sqrt(lon[:, None]**2 + lat[None, :]**2) > 20)
+        mask = (np.sqrt(lon[:, None]**2 + lat[None, :]**2) > 25)
         data =  np.where(mask, data, np.nan)
 
     plt.figure(figsize=(8, 6))
