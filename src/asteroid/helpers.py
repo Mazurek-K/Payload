@@ -83,7 +83,7 @@ def airy_disk2D(plot = False, focal_length = FOCAL_LENGTH, aperture = APERTURE):
         hs.append(pixel_array)
 
         if plot:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(8, 8))
 
             ax.imshow(
                 pixel_array,
@@ -96,15 +96,14 @@ def airy_disk2D(plot = False, focal_length = FOCAL_LENGTH, aperture = APERTURE):
 
             ax.set_xticks(np.arange(-0.5, n_pix, 1))
             ax.set_yticks(np.arange(-0.5, n_pix, 1))
-            ax.grid(color="red", linewidth=0.5)
-
+            ax.grid(color="red", linewidth=0.8)
 
             circle = Circle(
                 (pix_middle, pix_middle),
                 radius / PIXEL_PITCH,
                 fill=False,
                 edgecolor="blue",
-                linewidth=1.5
+                linewidth=2
             )
 
             ax.add_patch(circle)
@@ -112,10 +111,19 @@ def airy_disk2D(plot = False, focal_length = FOCAL_LENGTH, aperture = APERTURE):
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             ax.set_aspect("equal")
-            ax.set_title(f"Airy disk, λ = {wavelength:.1f} µm")
+
+            # Increase title size
+            ax.set_title(
+                f"Airy disk, λ = {wavelength:.1f} µm",
+                fontsize=26,
+                pad=10
+            )
+
+            # Remove unnecessary white margins
+            ax.margins(0)
+            fig.tight_layout(pad=0.2)
 
             plt.show()
-
     return hs
 
 
@@ -151,8 +159,11 @@ def plot_lat_long(data, title="-", mask=False, cmap="viridis"):
 
     plt.figure(figsize=(8, 6))
     mesh = plt.pcolormesh(lon, lat, data.T, shading="auto", cmap="inferno")
-    plt.colorbar(mesh, label=title)
-    plt.xlabel("Ecliptic longitude (deg)")
-    plt.ylabel("Ecliptic latitude (deg)")
+    # plt.colorbar(mesh, label=title)
+    cbar = plt.colorbar(mesh)
+    cbar.set_label(title, fontsize=18)  # Colorbar label size
+    cbar.ax.tick_params(labelsize=14)  # Colorbar tick numbers size
+    plt.xlabel("Ecliptic longitude (deg)", fontsize = 20)
+    plt.ylabel("Ecliptic latitude (deg)", fontsize = 20)
     plt.tight_layout()
     plt.show()

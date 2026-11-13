@@ -195,7 +195,6 @@ def calculate_background_global(plot = True, aperture = APERTURE, focal_length =
 
     # Select requested wavelengths
     wavelength_indices = []
-
     for requested_wavelength in WAVELENGTH_UM:
 
         matches = np.where(
@@ -229,11 +228,8 @@ def calculate_background_global(plot = True, aperture = APERTURE, focal_length =
 
     # Convert spectral intensity
     lam = wavelength * 1e-6
-
     I_nu = intensity * 1e-20
-
     I_lam = I_nu * c / lam**2 * 1e-6
-
     lens_area, omega_pix = get_optical_factors(aperture, focal_length)
 
 

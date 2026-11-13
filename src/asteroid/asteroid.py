@@ -94,7 +94,7 @@ def calculate_asteroid_signal(
             ax.set_yticklabels([])
             ax.set_aspect("equal")
             cbar = fig.colorbar(im, ax=ax)
-            cbar.set_label("Electron rate [electrons/s]")
+            cbar.set_label("Electron rate [electrons/s]", fontsize= 16)
             plt.show()
         return electron_rate_2d
     else:
