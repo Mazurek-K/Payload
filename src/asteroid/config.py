@@ -26,8 +26,6 @@ WAVELENGTH_UM = np.arange(8.0, 12.01, 1)
 APERTURE = 0.2
 FOCAL_LENGTH =2.5
 
-# APERTURE = 0.7
-# FOCAL_LENGTH =0.3
 TRANSMISSION = 0.7
 QE = 0.7
 # PIXEL_ROW = 480
@@ -47,7 +45,7 @@ EPSILON_F = 1. # surface ratio of incoming light on sensor
 ECLIPTIC_LON0 = 30.0
 ECLIPTIC_LAT0 = 20.0
 AST_DIAMETER = 20 # [m]
-AST_DISTANCE = 0.05 * AU_2_M
+AST_DISTANCE = 0.07 * AU_2_M
 AST_TEMPERATURE = 300 # [K]
 
 # Derived quantities

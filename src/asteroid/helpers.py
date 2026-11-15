@@ -135,7 +135,7 @@ def get_optical_factors(aperture, focal_length):
     return lens_area, omega_pix
 
 
-def plot_lat_long(data, title="-", mask=False, cmap="viridis"):
+def plot_lat_long(data, title="-", mask=False, cmap="viridis", numerical_mask = None):
 
     with h5py.File(HDF5_FILE, "r") as file:
         lon = file["coordinates/ecliptic_longitude_deg"][:]
@@ -157,6 +157,10 @@ def plot_lat_long(data, title="-", mask=False, cmap="viridis"):
         mask = (np.sqrt(lon[:, None]**2 + lat[None, :]**2) > 25)
         data =  np.where(mask, data, np.nan)
 
+    if numerical_mask is not None:
+        low,high = numerical_mask
+        data = np.where((data >= low) & (data <= high), data, np.nan)
+
     plt.figure(figsize=(8, 6))
     mesh = plt.pcolormesh(lon, lat, data.T, shading="auto", cmap="inferno")
     # plt.colorbar(mesh, label=title)
@@ -165,5 +169,27 @@ def plot_lat_long(data, title="-", mask=False, cmap="viridis"):
     cbar.ax.tick_params(labelsize=14)  # Colorbar tick numbers size
     plt.xlabel("Ecliptic longitude (deg)", fontsize = 20)
     plt.ylabel("Ecliptic latitude (deg)", fontsize = 20)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_interpolated_map(xv, yv, time_map_fine):
+
+    plt.figure(figsize=(8, 6))
+
+    mesh = plt.pcolormesh(
+        xv, yv, time_map_fine,
+        shading="auto",
+        cmap="inferno"
+    )
+
+    plt.colorbar(mesh, label="Exposure time")
+    plt.xlabel("Ecliptic longitude (deg)")
+    plt.ylabel("Ecliptic latitude (deg)")
+
+    plt.xlim(-65, 65)
+    plt.ylim(-65, 65)
+    plt.gca().set_aspect("equal")
+
     plt.tight_layout()
     plt.show()
