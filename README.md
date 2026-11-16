@@ -13,13 +13,14 @@ Simulates the asteroid against a realistic astronomical background.
 
 ### ✅ Completed
 - [x] Background model using [IRSA](https://irsa.ipac.caltech.edu/) data
-
+- [x] Asteroid model
+- [x] Finish the asteroid model
+- [x] Integrate the asteroid model into the background
 ### 🚧 In Progress
-- [ ] Asteroid model
+- [ ] Implement asteroid motion (maybe cascade and pykep)
 
 ### 📋 To Do
-- [ ] Finish the asteroid model
-- [ ] Integrate the asteroid model into the background
+
 - [ ] Implement asteroid motion
 
 ---
@@ -32,9 +33,8 @@ Sensor modeling and simulation using [ESA Pyxel](https://esa.gitlab.io/pyxel/).
 - [x] Successfully ran the tutorial example
 
 ### 📋 To Do
-- [ ] Configure basic sensor parameters
-- [ ] Run simulations with different settings
-- [ ] Iterate and evaluate the results
+- [ ] Configure basic sensor parameters and run
+
 
 ---
 

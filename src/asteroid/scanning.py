@@ -1,11 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import title
+
 from config import (HDF5_FILE)
 import h5py
 from scipy.interpolate import RegularGridInterpolator
 from helpers import plot_interpolated_map
 from matplotlib.path import Path
 np.set_printoptions(linewidth=200)
+
+from matplotlib.collections import PolyCollection
+import matplotlib.pyplot as plt
+import numpy as np
 
 def translate(coords, vector):
     return np.array(coords) + np.array(vector)
@@ -27,7 +33,7 @@ def scan_pattern(fov1, fov2, radius, overlap=0.2):
         [-fov1/2, -fov2/2]
     ])
 
-    radii = [radius, radius + fov2, radius + 2*fov2]
+    radii = [radius, radius + fov2, radius + 2*fov2, radius+3*fov2]
 
     all_images = []
     pointings_per_level = []
@@ -53,9 +59,6 @@ def scan_pattern(fov1, fov2, radius, overlap=0.2):
             closed_image = np.vstack([image, image[0]])
             plt.plot(closed_image[:, 0], closed_image[:, 1], color='blue')
 
-        print(f"Radius: {r}°")
-        print(f"Number of pointings: {n}")
-        print(f"Angular step: {360/n:.2f}°\n")
 
         circle = plt.Circle((0, 0), r, fill=False, color='red')
         plt.gca().add_patch(circle)
@@ -68,12 +71,12 @@ def scan_pattern(fov1, fov2, radius, overlap=0.2):
 
     all_images = np.array(all_images)
 
-    print(f"Total number of pointings: {len(all_images)}")
-    print(all_images)
-    return all_images, pointings_per_level
+    return all_images
 
 
-def exposure_times(time_map):
+def exposure_frames(time_map, fov1, fov2, min_angle = 25, plot = True):
+
+    #INterpolate first to get better resolution, like done in "background.py"
     with h5py.File(HDF5_FILE, "r") as file:
         lon = file["coordinates/ecliptic_longitude_deg"][:]
         lat = file["coordinates/ecliptic_latitude_deg"][:]
@@ -88,7 +91,6 @@ def exposure_times(time_map):
     lat_order = np.argsort(lat_1d)
     lon_1d = lon_1d[lon_order]
     lat_1d = lat_1d[lat_order]
-
     lon_fine = np.linspace(lon_1d[0], lon_1d[-1], 270)
     lat_fine = np.linspace(lat_1d[0], lat_1d[-1], 270)
 
@@ -104,13 +106,61 @@ def exposure_times(time_map):
     )
 
     points = np.column_stack((xv.ravel(), yv.ravel()))
+    # print("points shape: ", points.shape)
     time_map_fine = interpolator(points).reshape(xv.shape)
     plot_interpolated_map(xv,yv, time_map_fine)
 
+    images = scan_pattern(fov1, fov2, min_angle)
+
+    exposures = np.zeros(len(images))
+    for i, image in enumerate(images):
+        polygon = Path(image)
+        grid_points = np.column_stack((xv.ravel(), yv.ravel()))
+        mask = polygon.contains_points(grid_points, radius=1e-9).reshape(xv.shape)
+        inside_data = time_map_fine[mask]
+        exposures[i] = np.max(inside_data) if inside_data.size > 0 else np.nan
+
+
+    if plot:
+        fig, ax = plt.subplots(figsize=(8, 8))
+        collection = PolyCollection(
+            images,
+            array=exposures,  # Maps each rectangle to its exposure value
+            cmap="viridis",  # Color map (try 'plasma', 'inferno', or 'turbo')
+            edgecolors="black",  # Optional: outlines each rectangle
+            linewidths=0.4,  # Thin borders so overlapping rectangles stay readable
+            alpha=0.8,  # Slight transparency to see overlapping footprints
+        )
+        ax.add_collection(collection)
+        ax.autoscale_view()
+        ax.set_aspect("equal")
+        cbar = fig.colorbar(collection, ax=ax, label="Exposure Time [s]")
+        ax.set_xlabel("X Coordinate")
+        ax.set_ylabel("Y Coordinate")
+        ax.set_title("Exposure Time foro each frame")
+        plt.tight_layout()
+        plt.show()
 
 
 
-    return time_map_fine
+        t_plot = np.cumsum(exposures)/3600
+        fig, ax = plt.subplots()
+        ax.plot(t_plot, exposures)
+        ax.set(xlabel='time [h]', ylabel='exposure time [s]', title = 'Exposure length over scanning pattern')
+        ax.grid()
+        plt.show()
+
+    return exposures
+
+
+
+
+
+
+
+
+
+
 
 
 

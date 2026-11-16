@@ -2,7 +2,7 @@ from background import calculate_background_local, calculate_background_global
 from asteroid import calculate_asteroid_signal, plot_asteroid_parameter_space
 from config import ( DARK_CURRENT, READ_NOISE, WELL_CAPACITY, HDF5_FILE)
 from helpers import airy_disk, plot_lat_long, airy_disk2D
-from scanning import exposure_times
+from scanning import exposure_frames
 import numpy as np
 from scipy.optimize import minimize
 from scipy.optimize import differential_evolution
@@ -112,14 +112,14 @@ def main():
     plot_lat_long(snr_map, "SNR", mask=True, numerical_mask=[5,500])
     plot_lat_long(overexposed_map, "OVEREXPOSED")
     plot_lat_long(time, "time", mask=True, numerical_mask=[1, 50])
-    plot_asteroid_parameter_space()
+
     fov_rad1 = 2 * np.arctan((2048 * 18e-6) / (2 * fl))
     fov_rad2 = 2 * np.arctan((4 * 2048 * 18e-6) / (2 * fl))
     print("FOVs: ")
     print(np.rad2deg(fov_rad1))
     print(np.rad2deg(fov_rad2))
 
-    times_interp = exposure_times(time)
+    exposures = exposure_frames(time, fov1 =np.rad2deg(fov_rad1), fov2 = np.rad2deg(fov_rad2) )
 
 
 
