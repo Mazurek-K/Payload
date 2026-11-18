@@ -113,15 +113,15 @@ def main():
     plot_lat_long(overexposed_map, "OVEREXPOSED")
     plot_lat_long(time, "time", mask=True, numerical_mask=[1, 50])
 
-    fov_rad1 = 2 * np.arctan((2048 * 18e-6) / (2 * fl))
-    fov_rad2 = 2 * np.arctan((4 * 2048 * 18e-6) / (2 * fl))
+    fov_rad1 = 2 * np.arctan((2*2048 * 18e-6) / (2 * fl))
+    fov_rad2 = 2 * np.arctan((2 * 2048 * 18e-6) / (2 * fl))
     print("FOVs: ")
     print(np.rad2deg(fov_rad1))
     print(np.rad2deg(fov_rad2))
 
     exposures = exposure_frames(time, fov1 =np.rad2deg(fov_rad1), fov2 = np.rad2deg(fov_rad2) )
 
-
+    print(exposures.shape)
 
 if __name__ == "__main__":
     main()

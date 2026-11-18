@@ -19,7 +19,6 @@ from config import (
     FOCAL_LENGTH
 )
 
-
 def calculate_background_local( aperture = APERTURE, focal_length = FOCAL_LENGTH):
 
     with h5py.File(HDF5_FILE, "r") as file:

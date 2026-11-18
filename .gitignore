@@ -29,6 +29,7 @@ output/
 *.aux
 *.log
 *.out
+*.csv
 # =========================
 # Generated IRSA plots and data
 # =========================
