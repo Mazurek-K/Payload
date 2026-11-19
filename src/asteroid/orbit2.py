@@ -1,13 +1,22 @@
 import requests
 import matplotlib
-matplotlib.use("TkAgg")
+# matplotlib.use("TkAgg")
+import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from config import (AU_2_M)
 
-def download_orbit(command_str, filename):
+params_run ={ "START_TIME": "'2019-11-1 00:00'",
+             "STOP_TIME": "'2019-11-1 04:00'",
+             "STEP_SIZE": "'14400'"}
+
+params_verify ={"START_TIME": "'2019-11-1'",
+                "STOP_TIME": "'2019-12-15'",
+                "STEP_SIZE": "1d",}
+
+def download_orbit(command_str, filename, time_params):
     params = {
         "format": "text",
         "COMMAND": f"'{command_str}'",  # e.g., "-21" for SOHO, "DES=3562756;" for 2011 EO40
@@ -15,15 +24,11 @@ def download_orbit(command_str, filename):
         "MAKE_EPHEM": "'YES'",
         "EPHEM_TYPE": "'VECTORS'",
         "CENTER": "'500@10'",  # Sun-centered (use '500@31' for Sun-Earth L1)
-        "START_TIME": "'2019-11-1'",
-        "STOP_TIME": "'2019-12-1'",
-        "STEP_SIZE": "'1h'",
         "OUT_UNITS": "'KM-S'",
         "VEC_TABLE": "'2'",  # State vector: X, Y, Z, VX, VY, VZ
         "CSV_FORMAT": "'YES'",
     }
-    # "START_TIME": "'2019-11-1'",
-    # "STOP_TIME": "'2019-12-15'",
+    params.update(time_params)
 
     response = requests.get("https://ssd.jpl.nasa.gov/api/horizons.api", params=params)
     text = response.text
@@ -42,213 +47,168 @@ def download_orbit(command_str, filename):
 
     print(f"Saved {address}")
 
-#
-# download_orbit("-21", "soho")
-# download_orbit("31", "L1")
-# download_orbit("DES=2019 XF2;", "2019_XF2")
-# download_orbit("399", "Earth")
+
+# download_orbit("-21", "soho", params_run)
+# download_orbit("31", "L1", params_run)
+# download_orbit("DES=2019 XF2;", "2019_XF2",params_run)
+# download_orbit("399", "Earth",params_run)
 
 
-def observe_asteroid(input, plot = False):
-
-    # Read sc
+def observe_asteroid(input, fov1, fov2, single_frame = None):
     df1 = pd.read_csv("../outputs/soho.csv")
-    v_sc = np.array([df1["vx_kms"],df1["vy_kms"],df1["vz_kms"]])
-    r_sc = np.array([df1["x_km"],df1["y_km"],df1["z_km"]])
-
-    # Read asteroid
     df2 = pd.read_csv("../outputs/2019_XF2.csv")
-    v_ast = np.array([df2["vx_kms"],df2["vy_kms"],df2["vz_kms"]])
-    r_ast = np.array([df2["x_km"],df2["y_km"],df2["z_km"]])
-
-    # Read time
-    time = df1["jd"]
-
-    # Read L1
     df3 = pd.read_csv("../outputs/L1.csv")
-    v_L1 = np.array([df3["vx_kms"],df3["vy_kms"],df3["vz_kms"]])
-    r_L1 = np.array([df3["x_km"],df3["y_km"],df3["z_km"]])
 
-    # Read earth
-    df4 = pd.read_csv("../outputs/Earth.csv")
+    r_sc = np.array([df1["x_km"], df1["y_km"], df1["z_km"]])
+    r_ast = np.array([df2["x_km"], df2["y_km"], df2["z_km"]])
+    r_L1 = np.array([df3["x_km"], df3["y_km"], df3["z_km"]])
+    v_L1 = np.array([df3["vx_kms"], df3["vy_kms"], df3["vz_kms"]])
 
+    time_jd = df1["jd"].to_numpy()
+    time_seconds = np.round((time_jd - time_jd[0]) * 86400).astype(int)
+
+    if not np.all(np.diff(time_seconds) == 1):
+        print("Orbital time steps are not all separated by 1 second.")
+        # return
 
     # Define coordinate system of the SC, similar to LVLH but not fully
     # Always point to Sun but derive other from L1
     # x points sun, z points h
     x_sc = -r_sc / np.linalg.norm(r_sc, axis=0)
     h = np.cross(r_L1, v_L1, axis=0)
-
-    z_sc = h - np.sum(h * x_sc, axis=0) * x_sc # Gram–Schmidt
-    z_sc = z_sc / np.linalg.norm(z_sc, axis=0)
-
+    z_sc = h - np.sum(h * x_sc, axis=0) * x_sc
+    z_sc /= np.linalg.norm(z_sc, axis=0)
     y_sc = np.cross(z_sc, x_sc, axis=0)
-    y_sc = y_sc / np.linalg.norm(y_sc, axis=0)
     z_sc = np.cross(x_sc, y_sc, axis=0)
 
-    # SC -> inertial transformation
     M = np.stack([x_sc.T, y_sc.T, z_sc.T], axis=-1)
 
-    # Sensor rotations relative to SC frame
-    rot0 = R.from_euler('y', -20, degrees=True)
-    rot1 = R.from_euler('x', 0, degrees=True)
-    rot_sensor = rot1 * rot0
-
-    x_sensor = rot_sensor.apply([1, 0, 0])
-    y_sensor = rot_sensor.apply([0, 1, 0])
-    z_sensor = rot_sensor.apply([0, 0, 1])
-
-    x_sensor_inertial = np.array([M[i] @ x_sensor for i in range(len(M))])
-    y_sensor_inertial = np.array([M[i] @ y_sensor for i in range(len(M))])
-    z_sensor_inertial = np.array([M[i] @ z_sensor for i in range(len(M))])
-
-    # Relative asteroid position (inertial) spacecraft to asteorid
+    # Relative asteroid position
     dr = (r_ast - r_sc).T
 
-    visibility = np.vecdot(dr, x_sensor_inertial)>0
-
-    # Inertial -> SC frame
-    dr_sc = np.array([M[i].T @ dr[i] for i in range(len(dr))])
-
-    # SC -> sensor frame
-    dr_sensor = rot_sensor.inv().apply(dr_sc)
-
-    # Perspective projection onto sensor plane
-    #
-    hor_sensor = dr_sensor[:, 1] / dr_sensor[:, 0]
-    ver_sensor = dr_sensor[:, 2] / dr_sensor[:, 0]
-
-    hor_sensor = hor_sensor[visibility]
-    ver_sensor = ver_sensor[visibility]
-
-    fov1 = 45
-    fov2 = 90
-    limit_hor = np.tan(np.deg2rad(fov1/2))
-    limit_ver = np.tan(np.deg2rad(fov2/2))
-
-    mask = (np.abs(hor_sensor) <limit_hor )& \
-           (np.abs(ver_sensor) < limit_ver)
-
-    x_filtered = hor_sensor[mask]
-    y_filtered = ver_sensor[mask]
-
+    limit_hor = np.tan(np.deg2rad(fov1 / 2))
+    limit_ver = np.tan(np.deg2rad(fov2 / 2))
     focal_len = 1.2
-    x_filtered*=focal_len
-    y_filtered*=focal_len
+
+    os.makedirs("../outputs/images", exist_ok=True)
+
+    exposure_ends = np.cumsum(input[:, 0])
+    exposure_starts = np.insert(exposure_ends[:-1], 0, 0)
+
+    if single_frame is not None:
+        exposure_starts = np.asarray(single_frame)
+        exposure_ends = exposure_starts + input[:, 0]
+
+    for i, (start, end) in enumerate(zip(exposure_starts, exposure_ends)):
+        print("inter: ", i)
+
+        exposure, rot_y, rot_x = input[i]
+
+        # Find orbital samples belonging to this exposure
+        indices = np.where((time_seconds >= start) & (time_seconds < end))[0]
+
+        if len(indices) == 0:
+            continue
+
+        rot_sensor = R.from_euler('x', rot_x, degrees=True) * R.from_euler('y', rot_y, degrees=True)
+
+        # Project asteroid at every orbital sample during exposure
+        dr_sc = np.array([M[j].T @ dr[j] for j in indices])
+        dr_sensor = rot_sensor.inv().apply(dr_sc)
+
+        visible = dr_sensor[:, 0] > 0
+        dr_sensor = dr_sensor[visible]
+
+        if len(dr_sensor) == 0:
+            continue
+
+        hor = dr_sensor[:, 1] / dr_sensor[:, 0]
+        ver = dr_sensor[:, 2] / dr_sensor[:, 0]
+
+        mask = (np.abs(hor) < limit_hor) & (np.abs(ver) < limit_ver)
+
+        if not np.any(mask):
+            continue
+
+        x = focal_len * hor[mask]
+        y = focal_len * ver[mask]
+
+        fig, ax = plt.subplots(figsize=(6, 8))
+        ax.scatter(x, y, marker='o')
+        ax.set_xlim(-focal_len * limit_hor, focal_len * limit_hor)
+        ax.set_ylim(-focal_len * limit_ver, focal_len * limit_ver)
+        ax.set_xlabel("Sensor Y")
+        ax.set_ylabel("Sensor Z")
+        ax.set_title(f"Exposure {i}: {exposure} seconds\n"
+                     f" attitude:{rot_x}, {rot_y} \n"
+                     f"t_start = {start}")
+        ax.set_aspect('equal')
+        ax.grid()
+
+        fig.savefig(f"../outputs/images/image_{i:05d}.png", dpi=150)
+        plt.close(fig)
+
+    return {
+        "trajectories": [df1, df2, df3],
+        "r_sc": r_sc,
+        "r_ast": r_ast,
+        "M": M,
+        "time_seconds": time_seconds
+    }
 
 
+def plot_orbits(data, attitude=(0, 0), n=5):
+    matplotlib.use("TkAgg")
 
-    def plot2d3d(*dfs, frame_indices=None):
+    df1, df2, df3 = data["trajectories"]
+    r_sc, r_ast, M = data["r_sc"], data["r_ast"], data["M"]
 
-        plt.figure(figsize=(6, 8))
-        plt.plot(x_filtered, y_filtered, '-', label='Asteroid trajectory')
-        plt.xlim(-limit_hor, limit_hor)
-        plt.ylim(-limit_ver, limit_ver)
-        plt.xlabel('Sensor Y / X')
-        plt.ylabel('Sensor Z / X')
-        plt.title('Asteroid trajectory in sensor plane')
-        # plt.axis('equal')
-        plt.gca().set_aspect('equal', adjustable='box')
-        plt.grid()
-        plt.legend()
-        plt.show()
+    rot_y, rot_x = attitude
+    rot_sensor = R.from_euler('x', rot_x, degrees=True) * R.from_euler('y', rot_y, degrees=True)
 
+    # Sensor axes in inertial coordinates
+    sensor_axes = M @ rot_sensor.apply(np.eye(3)).T
 
-        fig = plt.figure(figsize=(10, 8))
-        ax = fig.add_subplot(111, projection="3d")
+    n = 5  # Number of points
 
-        all_x, all_y, all_z = [], [], []
+    frame_indices = np.linspace(0, len(r_sc.T) - 1, n, dtype=int)
 
-        # Plot trajectories
-        for i, df in enumerate(dfs):
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection="3d")
 
-            label = df.attrs.get("name", f"Trajectory {i+1}")
+    # Orbital trajectories
+    for df, name in zip([df1, df2, df3], ["SOHO", "Asteroid", "L1"]):
+        ax.plot(df["x_km"], df["y_km"], df["z_km"], label=name)
 
-            ax.plot(
-                df["x_km"],
-                df["y_km"],
-                df["z_km"],
-                label=label
-            )
+    # Spacecraft coordinate systems and asteroid connections
+    all_positions = np.hstack((r_sc, r_ast, data["trajectories"][2][["x_km", "y_km", "z_km"]].to_numpy().T))
+    max_range = np.max(np.ptp(all_positions, axis=1))
+    axis_length = max_range * 0.05
 
-            all_x.extend(df["x_km"])
-            all_y.extend(df["y_km"])
-            all_z.extend(df["z_km"])
+    for idx in frame_indices:
+        origin = r_sc[:, idx]
 
-        # Plot spacecraft coordinate systems
-        if frame_indices is not None:
+        ax.quiver(*origin, *sensor_axes[idx, :, 0], length=axis_length, normalize=True, color="darkred", label="Sensor X" if idx == frame_indices[0] else None)
+        ax.quiver(*origin, *sensor_axes[idx, :, 1], length=axis_length, normalize=True, color="darkgreen", label="Sensor Y" if idx == frame_indices[0] else None)
+        ax.quiver(*origin, *sensor_axes[idx, :, 2], length=axis_length, normalize=True, color="darkblue", label="Sensor Z" if idx == frame_indices[0] else None)
 
-            # Scale coordinate axes relative to orbit dimensions
-            max_range = max(
-                np.ptp(all_x),
-                np.ptp(all_y),
-                np.ptp(all_z)
-            )
+        ax.plot([r_sc[0, idx], r_ast[0, idx]], [r_sc[1, idx], r_ast[1, idx]], [r_sc[2, idx], r_ast[2, idx]], color="gray", linestyle="--", linewidth=0.8)
 
-            axis_length = max_range * 0.05
+    # Equal axis scaling
+    midpoint = (np.max(all_positions, axis=1) + np.min(all_positions, axis=1)) / 2
+    half_range = max_range / 2
 
-            for i, idx in enumerate(frame_indices):
+    ax.set_xlim(midpoint[0] - half_range, midpoint[0] + half_range)
+    ax.set_ylim(midpoint[1] - half_range, midpoint[1] + half_range)
+    ax.set_zlim(midpoint[2] - half_range, midpoint[2] + half_range)
+    ax.set_box_aspect([1, 1, 1])
 
-                origin = np.array([
-                    r_sc[0, idx],
-                    r_sc[1, idx],
-                    r_sc[2, idx]
-                ])
+    ax.set_xlabel("X (km)")
+    ax.set_ylabel("Y (km)")
+    ax.set_zlabel("Z (km)")
+    ax.legend()
+    ax.set_title("Orbital trajectories and sensor coordinate system")
+    plt.tight_layout()
 
 
-                # Sensor frame
-                ax.quiver(*origin, *x_sensor_inertial[idx, :],
-                          length=axis_length, normalize=True,
-                          color='darkred')
-
-                ax.quiver(*origin, *y_sensor_inertial[idx, :],
-                          length=axis_length, normalize=True,
-                          color='darkgreen')
-
-                ax.quiver(*origin, *z_sensor_inertial[idx, :],
-                          length=axis_length, normalize=True,
-                          color='darkblue')
-
-                ax.plot(
-                    [r_sc[0, idx], r_ast[0, idx]],
-                    [r_sc[1, idx], r_ast[1, idx]],
-                    [r_sc[2, idx], r_ast[2, idx]],
-                    color='gray',
-                    linestyle='--',
-                    linewidth=0.8,
-                    alpha=0.5
-                )
-
-        # Axis limits
-        max_range = max(
-            np.ptp(all_x),
-            np.ptp(all_y),
-            np.ptp(all_z)
-        ) / 2
-
-        mid_x = (max(all_x) + min(all_x)) / 2
-        mid_y = (max(all_y) + min(all_y)) / 2
-        mid_z = (max(all_z) + min(all_z)) / 2
-
-        ax.set_xlim(mid_x - max_range, mid_x + max_range)
-        ax.set_ylim(mid_y - max_range, mid_y + max_range)
-        ax.set_zlim(mid_z - max_range, mid_z + max_range)
-
-        ax.set_box_aspect([1, 1, 1])
-
-        ax.set_xlabel("X (km)")
-        ax.set_ylabel("Y (km)")
-        ax.set_zlabel("Z (km)")
-
-        ax.legend()
-        plt.tight_layout()
-        plt.show()
-
-
-    if plot:
-        n_frames = 30
-        indices = np.linspace(0,len(df1)-1, n_frames,dtype=int)
-        plot2d3d(df1, df2, df3,df4, frame_indices=indices)
-
-
-observe_asteroid(0, plot = True)
+    plt.show()

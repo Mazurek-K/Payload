@@ -4,6 +4,7 @@ from config import ( DARK_CURRENT, READ_NOISE, WELL_CAPACITY, HDF5_FILE)
 from helpers import airy_disk, plot_lat_long, airy_disk2D
 from scanning import exposure_frames
 import numpy as np
+from orbit2 import observe_asteroid, plot_orbits
 from scipy.optimize import minimize
 from scipy.optimize import differential_evolution
 import h5py
@@ -129,6 +130,15 @@ def main():
 
     imaging_input = np.column_stack((exposures,attitude))
 
+    # observation_data = observe_asteroid(imaging_input, fov1=6, fov2 = 20)
+    # plot_orbits(observation_data, attitude=(-20, 0))
+    #
+    observation_data = observe_asteroid(
+        np.array([[41,44.115, 150.275]]),
+        fov1=10,
+        fov2=25,
+        single_frame=[10955]
+    )
 
 
 if __name__ == "__main__":
