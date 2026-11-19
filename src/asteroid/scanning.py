@@ -26,6 +26,7 @@ def rotate(coords, angle):
 
 def scan_pattern(fov1, fov2, radius, overlap=0.2, n_radii = 4):
 
+    attitude = []
     dimensions = np.array([
         [fov1/2, -fov2/2],
         [fov1/2,  fov2/2],
@@ -56,6 +57,7 @@ def scan_pattern(fov1, fov2, radius, overlap=0.2, n_radii = 4):
                 translate(dimensions, [0, r + fov2/2]),
                 i * 360/n
             )
+            attitude.append([r,i * 360/n ])
 
             all_images.append(image)
 
@@ -74,7 +76,9 @@ def scan_pattern(fov1, fov2, radius, overlap=0.2, n_radii = 4):
 
     all_images = np.array(all_images)
 
-    return all_images
+
+    attitude = np.array(attitude, dtype = float)
+    return all_images, attitude
 
 
 def exposure_frames(time_map, fov1, fov2, min_angle = 25, plot = True):
@@ -113,7 +117,7 @@ def exposure_frames(time_map, fov1, fov2, min_angle = 25, plot = True):
     time_map_fine = interpolator(points).reshape(xv.shape)
     plot_interpolated_map(xv,yv, time_map_fine)
 
-    images = scan_pattern(fov1, fov2, min_angle,n_radii=8)
+    images, attitude = scan_pattern(fov1, fov2, min_angle,n_radii=4)
 
     exposures = np.zeros(len(images))
     for i, image in enumerate(images):

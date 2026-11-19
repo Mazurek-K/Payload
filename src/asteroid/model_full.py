@@ -8,6 +8,7 @@ from scipy.optimize import minimize
 from scipy.optimize import differential_evolution
 import h5py
 from src.asteroid.config import FOCAL_LENGTH, PIXEL_PITCH, APERTURE
+from src.asteroid.scanning import scan_pattern
 
 np.set_printoptions(linewidth=200)
 import matplotlib.pyplot as plt
@@ -94,7 +95,9 @@ def optimize_lens2():
     return result.x
 def main():
 
-    ap, fl = optimize_lens2()
+    # ap, fl = optimize_lens2()
+    ap = APERTURE
+    fl = FOCAL_LENGTH
 
     background_ele_map = calculate_background_global(plot=True, aperture=ap, focal_length=fl) # [e-/s/pix] {27x27}
     asteroid_ele2D = calculate_asteroid_signal(per_pixel2D=True, aperture=ap, focal_length=fl, plot=True)
@@ -113,15 +116,20 @@ def main():
     plot_lat_long(overexposed_map, "OVEREXPOSED")
     plot_lat_long(time, "time", mask=True, numerical_mask=[1, 50])
 
-    fov_rad1 = 2 * np.arctan((2*2048 * 18e-6) / (2 * fl))
-    fov_rad2 = 2 * np.arctan((2 * 2048 * 18e-6) / (2 * fl))
+    fov_rad1 = 2 * np.arctan((2048 * 18e-6) / (2 * fl))
+    fov_rad2 = 2 * np.arctan((4 * 2048 * 18e-6) / (2 * fl))
     print("FOVs: ")
     print(np.rad2deg(fov_rad1))
     print(np.rad2deg(fov_rad2))
 
     exposures = exposure_frames(time, fov1 =np.rad2deg(fov_rad1), fov2 = np.rad2deg(fov_rad2) )
+    _, attitude = scan_pattern(fov1 =np.rad2deg(fov_rad1), fov2 = np.rad2deg(fov_rad2),radius=25)
 
-    print(exposures.shape)
+    exposures = np.array(exposures, dtype=int)
+
+    imaging_input = np.column_stack((exposures,attitude))
+
+
 
 if __name__ == "__main__":
     main()
