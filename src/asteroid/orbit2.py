@@ -16,12 +16,14 @@ def download_orbit(command_str, filename):
         "EPHEM_TYPE": "'VECTORS'",
         "CENTER": "'500@10'",  # Sun-centered (use '500@31' for Sun-Earth L1)
         "START_TIME": "'2019-11-1'",
-        "STOP_TIME": "'2019-12-15'",
+        "STOP_TIME": "'2019-12-1'",
         "STEP_SIZE": "'1h'",
         "OUT_UNITS": "'KM-S'",
         "VEC_TABLE": "'2'",  # State vector: X, Y, Z, VX, VY, VZ
         "CSV_FORMAT": "'YES'",
     }
+    # "START_TIME": "'2019-11-1'",
+    # "STOP_TIME": "'2019-12-15'",
 
     response = requests.get("https://ssd.jpl.nasa.gov/api/horizons.api", params=params)
     text = response.text
@@ -40,10 +42,7 @@ def download_orbit(command_str, filename):
 
     print(f"Saved {address}")
 
-# download_orbit("DES=2024 MK;", "2024_MK")   # 2011 EO40
 
-## download_orbit("DES=2024 VA11;", "2026_VA11")   # 2011 EO40
-#
 download_orbit("-21", "soho")
 download_orbit("31", "L1")
 download_orbit("DES=2019 XF2;", "2019_XF2")
@@ -91,7 +90,7 @@ z_sc = np.cross(x_sc, y_sc, axis=0)
 M = np.stack([x_sc.T, y_sc.T, z_sc.T], axis=-1)
 
 # Sensor rotations relative to SC frame
-rot0 = R.from_euler('y', -25, degrees=True)
+rot0 = R.from_euler('y', 0, degrees=True)
 rot1 = R.from_euler('x', 0, degrees=True)
 rot_sensor = rot1 * rot0
 
@@ -132,6 +131,10 @@ mask = (np.abs(hor_sensor) <limit_hor )& \
 
 x_filtered = hor_sensor[mask]
 y_filtered = ver_sensor[mask]
+
+focal_len = 1.2
+x_filtered*=focal_len
+y_filtered*=focal_len
 
 plt.figure(figsize=(6, 8))
 
