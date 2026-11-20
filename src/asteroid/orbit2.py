@@ -1,6 +1,7 @@
 import requests
 import matplotlib
 # matplotlib.use("TkAgg")
+from config import FOCAL_LENGTH
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,9 +9,9 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 from config import (AU_2_M)
 
-params_run ={ "START_TIME": "'2019-11-1 00:00'",
-             "STOP_TIME": "'2019-11-1 04:00'",
-             "STEP_SIZE": "'14400'"}
+params_run ={ "START_TIME": "'2019-11-15 00:00'",
+             "STOP_TIME": "'2019-11-15 08:00'",
+             "STEP_SIZE": "'28800'"}
 
 params_verify ={"START_TIME": "'2019-11-1'",
                 "STOP_TIME": "'2019-12-15'",
@@ -53,11 +54,22 @@ def download_orbit(command_str, filename, time_params):
 # download_orbit("DES=2019 XF2;", "2019_XF2",params_run)
 # download_orbit("399", "Earth",params_run)
 
+# download_orbit("-21", "soho_ver", params_verify)
+# download_orbit("31", "L1_ver", params_verify)
+# download_orbit("DES=2019 XF2;", "2019_XF2_ver",params_verify)
+# download_orbit("399", "Earth_ver",params_verify)
 
-def observe_asteroid(input, fov1, fov2, single_frame = None):
-    df1 = pd.read_csv("../outputs/soho.csv")
-    df2 = pd.read_csv("../outputs/2019_XF2.csv")
-    df3 = pd.read_csv("../outputs/L1.csv")
+
+def observe_asteroid(input, fov1, fov2, single_frame = None, verify = False):
+
+    if not verify:
+        df1 = pd.read_csv("../outputs/soho.csv")
+        df2 = pd.read_csv("../outputs/2019_XF2.csv")
+        df3 = pd.read_csv("../outputs/L1.csv")
+    else:
+        df1 = pd.read_csv("../outputs/soho_ver.csv")
+        df2 = pd.read_csv("../outputs/2019_XF2_ver.csv")
+        df3 = pd.read_csv("../outputs/L1_ver.csv")
 
     r_sc = np.array([df1["x_km"], df1["y_km"], df1["z_km"]])
     r_ast = np.array([df2["x_km"], df2["y_km"], df2["z_km"]])
@@ -88,7 +100,7 @@ def observe_asteroid(input, fov1, fov2, single_frame = None):
 
     limit_hor = np.tan(np.deg2rad(fov1 / 2))
     limit_ver = np.tan(np.deg2rad(fov2 / 2))
-    focal_len = 1.2
+    focal_len = FOCAL_LENGTH
 
     os.makedirs("../outputs/images", exist_ok=True)
 
@@ -100,13 +112,12 @@ def observe_asteroid(input, fov1, fov2, single_frame = None):
         exposure_ends = exposure_starts + input[:, 0]
 
     for i, (start, end) in enumerate(zip(exposure_starts, exposure_ends)):
-        print("inter: ", i)
+        # print("inter: ", i)
 
         exposure, rot_y, rot_x = input[i]
 
         # Find orbital samples belonging to this exposure
         indices = np.where((time_seconds >= start) & (time_seconds < end))[0]
-
         if len(indices) == 0:
             continue
 
@@ -148,6 +159,11 @@ def observe_asteroid(input, fov1, fov2, single_frame = None):
         fig.savefig(f"../outputs/images/image_{i:05d}.png", dpi=150)
         plt.close(fig)
 
+        print("Detected")
+        print("x movement: ",np.max(x) - np.min(x))
+        print("y: ",np.max(y)-np.min(y))
+
+
     return {
         "trajectories": [df1, df2, df3],
         "r_sc": r_sc,
@@ -157,7 +173,7 @@ def observe_asteroid(input, fov1, fov2, single_frame = None):
     }
 
 
-def plot_orbits(data, attitude=(0, 0), n=5):
+def plot_orbits(data, attitude=(0, 0), n=7):
     matplotlib.use("TkAgg")
 
     df1, df2, df3 = data["trajectories"]
@@ -168,8 +184,6 @@ def plot_orbits(data, attitude=(0, 0), n=5):
 
     # Sensor axes in inertial coordinates
     sensor_axes = M @ rot_sensor.apply(np.eye(3)).T
-
-    n = 5  # Number of points
 
     frame_indices = np.linspace(0, len(r_sc.T) - 1, n, dtype=int)
 
@@ -212,3 +226,4 @@ def plot_orbits(data, attitude=(0, 0), n=5):
 
 
     plt.show()
+

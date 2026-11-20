@@ -1,7 +1,7 @@
 from background import calculate_background_local, calculate_background_global
 from asteroid import calculate_asteroid_signal, plot_asteroid_parameter_space
 from config import ( DARK_CURRENT, READ_NOISE, WELL_CAPACITY, HDF5_FILE)
-from helpers import airy_disk, plot_lat_long, airy_disk2D
+from helpers import airy_disk, plot_lat_long, airy_disk2D, airy_disk2D_blur
 from scanning import exposure_frames
 import numpy as np
 from orbit2 import observe_asteroid, plot_orbits
@@ -109,36 +109,42 @@ def main():
     t_opt_map =  (WELL_CAPACITY / (asteroid_ele1D + total_background))
     time = np.clip(t_opt_map, 1, 50)
 
+    # airy_disk2D(plot=True)
+    airy_disk2D_blur(motion_vec=[50.901487972625243e-06,20.4713955206745724e-06], plot=True)
 
-    snr_map = signal_to_noise(background_ele_map, np.max(asteroid_ele2D), time)
-    overexposed_map = overexposed(background_ele_map,time)
+    # snr_map = signal_to_noise(background_ele_map, np.max(asteroid_ele2D), time)
+    # overexposed_map = overexposed(background_ele_map,time)
+    # plot_lat_long(snr_map, "SNR", mask=True, numerical_mask=[5,500])
+    # plot_lat_long(overexposed_map, "OVEREXPOSED")
+    # plot_lat_long(time, "time", mask=True, numerical_mask=[1, 50])
 
-    plot_lat_long(snr_map, "SNR", mask=True, numerical_mask=[5,500])
-    plot_lat_long(overexposed_map, "OVEREXPOSED")
-    plot_lat_long(time, "time", mask=True, numerical_mask=[1, 50])
-
-    fov_rad1 = 2 * np.arctan((2048 * 18e-6) / (2 * fl))
-    fov_rad2 = 2 * np.arctan((4 * 2048 * 18e-6) / (2 * fl))
+    fov_rad1 = 2 * np.arctan((2*2048 * 18e-6) / (2 * fl))
+    fov_rad2 = 2 * np.arctan((2 * 2048 * 18e-6) / (2 * fl))
+    fov1 = np.rad2deg(fov_rad1)
+    fov2 = np.rad2deg(fov_rad2)
     print("FOVs: ")
     print(np.rad2deg(fov_rad1))
     print(np.rad2deg(fov_rad2))
 
-    exposures = exposure_frames(time, fov1 =np.rad2deg(fov_rad1), fov2 = np.rad2deg(fov_rad2) )
-    _, attitude = scan_pattern(fov1 =np.rad2deg(fov_rad1), fov2 = np.rad2deg(fov_rad2),radius=25)
 
-    exposures = np.array(exposures, dtype=int)
-
-    imaging_input = np.column_stack((exposures,attitude))
-
-    # observation_data = observe_asteroid(imaging_input, fov1=6, fov2 = 20)
-    # plot_orbits(observation_data, attitude=(-20, 0))
+    # exposures = exposure_frames(time, fov1 =fov1, fov2 = fov2, n_radii=10 )
+    # _, attitude = scan_pattern(fov1 = fov1, fov2 =fov2 ,radius=25, n_radii=10)
     #
-    observation_data = observe_asteroid(
-        np.array([[41,44.115, 150.275]]),
-        fov1=10,
-        fov2=25,
-        single_frame=[10955]
-    )
+    # exposures = np.array(exposures, dtype=int)
+    #
+    # imaging_input = np.column_stack((exposures,attitude))
+    # imaging_input = np.vstack([imaging_input])
+    #
+    # observation_data = observe_asteroid(imaging_input, fov1=fov1, fov2 = fov2, verify=False)
+
+    # plot_orbits(observation_data, attitude=(0, 0))
+
+    # observation_data = observe_asteroid(
+    #     np.array([[41,50, 150.275]]),
+    #     fov1=1.5,
+    #     fov2=7,
+    #     single_frame=[10955]
+    # )
 
 
 if __name__ == "__main__":

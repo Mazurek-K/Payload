@@ -81,7 +81,7 @@ def scan_pattern(fov1, fov2, radius, overlap=0.2, n_radii = 4):
     return all_images, attitude
 
 
-def exposure_frames(time_map, fov1, fov2, min_angle = 25, plot = True):
+def exposure_frames(time_map, fov1, fov2, n_radii,min_angle = 25, plot = True):
 
     #INterpolate first to get better resolution, like done in "background.py"
     with h5py.File(HDF5_FILE, "r") as file:
@@ -117,7 +117,7 @@ def exposure_frames(time_map, fov1, fov2, min_angle = 25, plot = True):
     time_map_fine = interpolator(points).reshape(xv.shape)
     plot_interpolated_map(xv,yv, time_map_fine)
 
-    images, attitude = scan_pattern(fov1, fov2, min_angle,n_radii=4)
+    images, attitude = scan_pattern(fov1, fov2, min_angle,n_radii=n_radii)
 
     exposures = np.zeros(len(images))
     for i, image in enumerate(images):

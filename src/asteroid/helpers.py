@@ -127,6 +127,126 @@ def airy_disk2D(plot = False, focal_length = FOCAL_LENGTH, aperture = APERTURE):
     return hs
 
 
+
+
+def airy_disk2D_blur(motion_vec, plot = False, focal_length = FOCAL_LENGTH, aperture = APERTURE):
+
+    hs = []
+
+    # Maximum grid size, based on the largest wavelength
+    d_airy_max = 2 * 1.22e-6 * np.max(WAVELENGTH_UM)/aperture
+    d_airy_focal_max = focal_length * d_airy_max
+
+    n_pix = int(np.ceil(d_airy_focal_max / PIXEL_PITCH))
+    n_pix = n_pix + 1 if n_pix % 2 == 0 else n_pix
+
+    pix_middle = n_pix // 2
+
+    # Grid coordinates (same for all wavelengths)
+    x = (np.arange(n_pix) - pix_middle) * PIXEL_PITCH
+    y = (np.arange(n_pix) - pix_middle) * PIXEL_PITCH
+
+    for wavelength in WAVELENGTH_UM:
+
+        # Calculate radius for this wavelength
+        d_airy = 2 * 1.22e-6 * wavelength/aperture
+        d_airy_focal = focal_length * d_airy
+        radius = d_airy_focal / 2
+
+        pixel_array = np.zeros((n_pix, n_pix))
+
+        # Calculate fractional pixel coverage
+        for i in range(n_pix):
+            for j in range(n_pix):
+
+                area = circle_pixel_area(
+                    x[j], y[i], PIXEL_PITCH, radius
+                )
+
+                pixel_array[i, j] = area / PIXEL_PITCH**2
+
+        pixel_array = pixel_array/(np.sum(pixel_array))
+        hs.append(pixel_array)
+
+    n = 10
+    dv = np.linspace([0, 0], motion_vec, n)
+    pp = PIXEL_PITCH
+    blurred_hs = []
+
+    # Maximum displacement in pixels
+    max_dx = int(np.ceil(abs(motion_vec[0]) / pp))
+    max_dy = int(np.ceil(abs(motion_vec[1]) / pp))
+
+    # Offset to accommodate negative displacements
+    offset_x = max_dx + 1
+    offset_y = max_dy + 1
+
+    for ad in hs:
+
+        ad = ad / n
+        blurred = np.zeros((n_pix + 2 * max_dy + 2,n_pix + 2 * max_dx + 2 ))
+
+        for j in range(n):
+
+            dv_jx, dv_jy = dv[j]
+            dx = dv_jx / pp
+            dy = dv_jy / pp
+
+            ix = int(np.floor(dx))
+            iy = int(np.floor(dy))
+
+            fx = dx - ix
+            fy = dy - iy
+
+            for (row, col), value in np.ndenumerate(ad):
+                tl = value * (1 - fx) * (1 - fy)
+                tr = value * fx * (1 - fy)
+                bl = value * (1 - fx) * fy
+                br = value * fx * fy
+                r = row + iy + offset_y
+                c = col + ix + offset_x
+                blurred[r, c] += tl
+                blurred[r, c + 1] += tr
+                blurred[r + 1, c] += bl
+                blurred[r + 1, c + 1] += br
+
+        blurred_hs.append(blurred)
+
+    pixel_array = blurred_hs
+    for i, pixel_array in enumerate(blurred_hs):
+
+        if plot:
+            fig, ax = plt.subplots(figsize=(8, 8))
+
+            ax.imshow(
+                pixel_array,
+                origin="lower",
+                cmap="gray",
+                interpolation="nearest",
+                vmin=0,
+                vmax=np.max(pixel_array)
+            )
+
+            ax.set_xticks(np.arange(-0.5, pixel_array.shape[1], 1))
+            ax.set_yticks(np.arange(-0.5, pixel_array.shape[0], 1))
+            ax.grid(color="red", linewidth=0.8)
+
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_aspect("equal")
+            ax.set_title(
+                f"Motion-blurred Airy disk, λ = {WAVELENGTH_UM[i]:.1f} µm",
+                fontsize=26,
+                pad=10
+            )
+            ax.margins(0)
+            fig.tight_layout(pad=0.2)
+
+            plt.show()
+    return blurred_hs
+
+
+
 def get_optical_factors(aperture, focal_length):
     lens_area = np.pi * aperture ** 2 / 4
     theta_pix = SR_TO_ARCSEC * PIXEL_PITCH / focal_length  # [arcsec]
@@ -193,3 +313,12 @@ def plot_interpolated_map(xv, yv, time_map_fine):
 
     plt.tight_layout()
     plt.show()
+
+
+import numpy as np
+from PIL import Image
+
+a = np.random.randint(0, 256, (1000, 1000), dtype=np.uint8)
+
+img = Image.fromarray(a, mode="L")
+img.show()
