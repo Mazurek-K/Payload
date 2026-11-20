@@ -11,6 +11,7 @@ import h5py
 from src.asteroid.config import FOCAL_LENGTH, PIXEL_PITCH, APERTURE
 from src.asteroid.scanning import scan_pattern
 from PIL import Image
+from detector import simulate_detector
 
 np.set_printoptions(linewidth=200)
 import matplotlib.pyplot as plt
@@ -38,10 +39,16 @@ def overexposed(background_ele_map, time):
     return overexposed
 
 def expose(background_ele, asteroid_map, time):
+
     background = background_ele * time
     asteroid = asteroid_map * time
 
-    image = np.full( (PIXEL_ROW, PIXEL_ROW), background,dtype=float )
+    image = np.full(
+        (PIXEL_ROW, PIXEL_ROW),
+        background,
+        dtype=float
+    )
+
     len_x, len_y = asteroid.shape
 
     start_x = (PIXEL_ROW - len_x) // 2
@@ -52,12 +59,23 @@ def expose(background_ele, asteroid_map, time):
         start_y:start_y + len_y
     ] += asteroid
 
-    image = np.clip(image, 0, WELL_CAPACITY)
-    image_display = (image / WELL_CAPACITY * 255).astype(np.uint8)
+    # Detector simulation using ESA Pyxel
+    noisy_image = simulate_detector(
+        electron_image=image,
+        exposure_time=time,
+        seed=42
+    )
+
+    # Display noisy image
+    image_display = (
+        np.clip(noisy_image, 0, WELL_CAPACITY)
+        / WELL_CAPACITY * 255
+    ).astype(np.uint8)
+
     img = Image.fromarray(image_display, mode="L")
     img.show()
 
-    return image
+    return noisy_image
 
 def optimize_lens2():
     def snr_def(ap, fl):

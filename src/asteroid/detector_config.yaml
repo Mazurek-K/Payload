@@ -1,0 +1,52 @@
+# ESA Pyxel configuration
+# Detector noise simulation
+
+exposure:
+
+  readout:
+    times: [1.0]
+    non_destructive: false
+
+  outputs:
+    output_folder: "detector_output"
+
+
+# Detector definition
+ccd_detector:
+
+  geometry:
+    row: 2048
+    col: 2048
+
+    total_thickness: 40.0
+
+    # Pyxel uses micrometers here
+    pixel_vert_size: 18.0
+    pixel_horz_size: 18.0
+
+  environment:
+    temperature: 300.0
+
+  characteristics:
+
+    # Input image already contains electrons.
+    # QE must not be applied again.
+    quantum_efficiency: 1.0
+
+    full_well_capacity: 80000.0
+
+
+# Detector models
+pipeline:
+
+  charge_generation:
+
+    - name: pyxel_detector_noise
+      func: detector.pyxel_detector_noise
+      enabled: true
+
+      arguments:
+        dark_current: 0.05
+        read_noise: 15.0
+        full_well: 80000.0
+        seed: 42
