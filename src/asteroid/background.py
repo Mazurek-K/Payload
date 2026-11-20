@@ -19,7 +19,8 @@ from config import (
     FOCAL_LENGTH
 )
 
-def calculate_background_local( aperture = APERTURE, focal_length = FOCAL_LENGTH):
+def calculate_background_local( aperture = APERTURE, focal_length = FOCAL_LENGTH, ecliptic_lon = ECLIPTIC_LON0,
+                                ecliptic_lat = ECLIPTIC_LAT0):
 
     with h5py.File(HDF5_FILE, "r") as file:
 
@@ -98,7 +99,7 @@ def calculate_background_local( aperture = APERTURE, focal_length = FOCAL_LENGTH
     )
 
     # Position at which to interpolate
-    position = np.array([[ECLIPTIC_LON0, ECLIPTIC_LAT0]])
+    position = np.array([[ecliptic_lon, ecliptic_lat]])
 
     # Result contains one value per wavelength
     intensity = interpolator(position)[0]

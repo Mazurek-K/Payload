@@ -1,6 +1,6 @@
 from background import calculate_background_local, calculate_background_global
 from asteroid import calculate_asteroid_signal, plot_asteroid_parameter_space
-from config import ( DARK_CURRENT, READ_NOISE, WELL_CAPACITY, HDF5_FILE)
+from config import ( DARK_CURRENT, READ_NOISE, WELL_CAPACITY, HDF5_FILE, PIXEL_ROW)
 from helpers import airy_disk, plot_lat_long, airy_disk2D, airy_disk2D_blur
 from scanning import exposure_frames
 import numpy as np
@@ -10,6 +10,7 @@ from scipy.optimize import differential_evolution
 import h5py
 from src.asteroid.config import FOCAL_LENGTH, PIXEL_PITCH, APERTURE
 from src.asteroid.scanning import scan_pattern
+from PIL import Image
 
 np.set_printoptions(linewidth=200)
 import matplotlib.pyplot as plt
@@ -36,6 +37,27 @@ def overexposed(background_ele_map, time):
 
     return overexposed
 
+def expose(background_ele, asteroid_map, time):
+    background = background_ele * time
+    asteroid = asteroid_map * time
+
+    image = np.full( (PIXEL_ROW, PIXEL_ROW), background,dtype=float )
+    len_x, len_y = asteroid.shape
+
+    start_x = (PIXEL_ROW - len_x) // 2
+    start_y = (PIXEL_ROW - len_y) // 2
+
+    image[
+        start_x:start_x + len_x,
+        start_y:start_y + len_y
+    ] += asteroid
+
+    image = np.clip(image, 0, WELL_CAPACITY)
+    image_display = (image / WELL_CAPACITY * 255).astype(np.uint8)
+    img = Image.fromarray(image_display, mode="L")
+    img.show()
+
+    return image
 
 def optimize_lens2():
     def snr_def(ap, fl):
@@ -104,13 +126,14 @@ def main():
     asteroid_ele2D = calculate_asteroid_signal(per_pixel2D=True, aperture=ap, focal_length=fl, plot=True)
 
 
-    total_background = background_ele_map + DARK_CURRENT
-    asteroid_ele1D = np.max(asteroid_ele2D)
-    t_opt_map =  (WELL_CAPACITY / (asteroid_ele1D + total_background))
-    time = np.clip(t_opt_map, 1, 50)
+
+    # total_background = background_ele_map + DARK_CURRENT
+    # asteroid_ele1D = np.max(asteroid_ele2D)
+    # t_opt_map =  (WELL_CAPACITY / (asteroid_ele1D + total_background))
+    # time = np.clip(t_opt_map, 1, 50)
 
     # airy_disk2D(plot=True)
-    airy_disk2D_blur(motion_vec=[50.901487972625243e-06,20.4713955206745724e-06], plot=True)
+    # airy_disk2D_blur(motion_vec=[50.901487972625243e-06,20.4713955206745724e-06], plot=True)
 
     # snr_map = signal_to_noise(background_ele_map, np.max(asteroid_ele2D), time)
     # overexposed_map = overexposed(background_ele_map,time)
@@ -118,13 +141,13 @@ def main():
     # plot_lat_long(overexposed_map, "OVEREXPOSED")
     # plot_lat_long(time, "time", mask=True, numerical_mask=[1, 50])
 
-    fov_rad1 = 2 * np.arctan((2*2048 * 18e-6) / (2 * fl))
-    fov_rad2 = 2 * np.arctan((2 * 2048 * 18e-6) / (2 * fl))
-    fov1 = np.rad2deg(fov_rad1)
-    fov2 = np.rad2deg(fov_rad2)
-    print("FOVs: ")
-    print(np.rad2deg(fov_rad1))
-    print(np.rad2deg(fov_rad2))
+    # fov_rad1 = 2 * np.arctan((2*2048 * 18e-6) / (2 * fl))
+    # fov_rad2 = 2 * np.arctan((2 * 2048 * 18e-6) / (2 * fl))
+    # fov1 = np.rad2deg(fov_rad1)
+    # fov2 = np.rad2deg(fov_rad2)
+    # print("FOVs: ")
+    # print(np.rad2deg(fov_rad1))
+    # print(np.rad2deg(fov_rad2))
 
 
     # exposures = exposure_frames(time, fov1 =fov1, fov2 = fov2, n_radii=10 )
@@ -145,6 +168,11 @@ def main():
     #     fov2=7,
     #     single_frame=[10955]
     # )
+
+    background = calculate_background_local()
+    asteroid_ele2D = calculate_asteroid_signal(per_pixel2d_blur=True, aperture=ap, focal_length=fl, plot=True)
+    expose(background_ele=background, asteroid_map=asteroid_ele2D, time = 20)
+
 
 
 if __name__ == "__main__":

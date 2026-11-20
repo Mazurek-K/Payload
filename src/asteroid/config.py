@@ -43,8 +43,8 @@ EMISSIVITY = 1.
 EPSILON_F = 1. # surface ratio of incoming light on sensor
 # RA0, DEC0 = 25.0, 30.0
 ECLIPTIC_LON0 = 30.0
-ECLIPTIC_LAT0 = 20.0
-AST_DIAMETER = 20 # [m]
+ECLIPTIC_LAT0 = 50.0
+AST_DIAMETER = 70 # [m]
 AST_DISTANCE = 0.07 * AU_2_M
 AST_TEMPERATURE = 300 # [K]
 

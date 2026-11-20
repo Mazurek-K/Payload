@@ -1,4 +1,4 @@
-from helpers import airy_disk, airy_disk2D, get_optical_factors
+from helpers import airy_disk, airy_disk2D, get_optical_factors, airy_disk2D_blur
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,6 +23,7 @@ def calculate_asteroid_signal(
     focal_length = FOCAL_LENGTH,
     per_pixel = False,
     per_pixel2D = False,
+    per_pixel2d_blur = False,
     plot = False
 ):
     if per_pixel and per_pixel2D:
@@ -60,6 +61,44 @@ def calculate_asteroid_signal(
         dC_dlambda_perpix = dC_dlambda / n_pix_source
         electron_rate_perpix = np.trapezoid(dC_dlambda_perpix, WAVELENGTH_UM)
         return electron_rate_perpix
+
+    if per_pixel2d_blur:
+        hs = airy_disk2D_blur(motion_vec=[50.901487972625243e-06,20.4713955206745724e-06],aperture=aperture, focal_length=focal_length)
+
+        # Distribute the spectral signal across the 2D pixel masks
+        dC_dlambda_2d = (
+                dC_dlambda[:, np.newaxis, np.newaxis] * np.array(hs))
+
+        # Integrate over wavelength
+        electron_rate_2d = np.trapezoid(
+            dC_dlambda_2d,
+            WAVELENGTH_UM,
+            axis=0
+        )
+        if plot:
+            fig, ax = plt.subplots()
+            im = ax.imshow(
+                electron_rate_2d,
+                origin="lower",
+                cmap="gray",
+                interpolation="nearest",
+                vmin=0,
+                vmax=np.max(electron_rate_2d)
+            )
+
+            n_pix = electron_rate_2d.shape[0]
+            ax.set_xticks(np.arange(-0.5, n_pix, 1))
+            ax.set_yticks(np.arange(-0.5, n_pix, 1))
+            ax.grid(color="red", linewidth=0.5)
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_aspect("equal")
+            cbar = fig.colorbar(im, ax=ax)
+            cbar.set_label("Electron rate [electrons/s]", fontsize=16)
+            plt.show()
+
+        return electron_rate_2d
+
 
     if per_pixel2D:
         hs = airy_disk2D( aperture = aperture, focal_length = focal_length)

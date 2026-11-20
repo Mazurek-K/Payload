@@ -315,10 +315,19 @@ def plot_interpolated_map(xv, yv, time_map_fine):
     plt.show()
 
 
-import numpy as np
-from PIL import Image
+# import numpy as np
+# from PIL import Image
+#
+# a = np.random.randint(0, 256, (1000, 1000), dtype=np.uint8)
+#
+# img = Image.fromarray(a, mode="L")
+# img.show()
 
-a = np.random.randint(0, 256, (1000, 1000), dtype=np.uint8)
 
-img = Image.fromarray(a, mode="L")
-img.show()
+# a = np.zeros([10,10])
+# print(a)
+# b = np.ones([2,2])
+# a[3:5,3:5]+=b
+#
+# print(a)
+
